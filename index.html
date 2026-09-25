@@ -150,14 +150,14 @@
     };
 
     const realms = [
-      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','burst','shooter','sword','zone','mines','claw','blackout','sniper'] },
-      { at: 450, name: 'Chrome Thunder', tag: 'HARD', hue: 210, accent: '#9cc7ff', bg: ['#070b16', '#121b2e', '#060812'], dark: .05, redLights: .08, fire: 0, speed: 1.03, gap: 6, pool: ['dual','diamond','spinner','sweep','burst','sword','zone','mines','sniper','top','bottom','shooter','claw','saw'] },
-      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','zone','burst','sniper','dual','diamond','spinner','sweep','mines','claw','saw','blackout'] },
-      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .22, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['blackout','sniper','sweep','spinner','zone','sword','claw','saw','mines','diamond','boss'] },
-      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','burst','zone','sniper','boss','dual','diamond','saw','claw','mines','blackout','sweep'] },
-      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['zone','sweep','sword','sniper','burst','boss','saw','claw','mines','blackout','spinner'] },
-      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','zone','sniper','burst','saw','claw','blackout','mines','sweep','spinner'] },
-      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .56, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','zone','sword','burst','saw','claw','mines','sweep','spinner'] },
+      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','sword','mines','shuriken','drop_shuriken','blackout','sniper'] },
+      { at: 450, name: 'Chrome Thunder', tag: 'HARD', hue: 210, accent: '#9cc7ff', bg: ['#070b16', '#121b2e', '#060812'], dark: .05, redLights: .08, fire: 0, speed: 1.03, gap: 6, pool: ['dual','diamond','spinner','sweep','sword','mines','sniper','top','bottom','claw','saw','shuriken','drop_shuriken','slash_gate'] },
+      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','slash_gate','sniper','dual','diamond','spinner','sweep','mines','claw','saw','shuriken','drop_shuriken','blackout'] },
+      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .22, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['blackout','sniper','sweep','spinner','slash_gate','sword','claw','saw','mines','diamond','boss','shuriken','drop_shuriken'] },
+      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','slash_gate','sniper','boss','dual','diamond','saw','claw','mines','blackout','sweep','shuriken','drop_shuriken'] },
+      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['slash_gate','sweep','sword','sniper','boss','saw','claw','mines','blackout','spinner','shuriken','drop_shuriken'] },
+      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','blackout','mines','sweep','spinner','shuriken','drop_shuriken'] },
+      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .56, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
     ];
 
     const state = {
@@ -294,6 +294,7 @@
           flash(120);
         }
         if (o.type === 'boss') updateBoss(o, dt);
+        if (o.type === 'shuriken' || o.type === 'drop_shuriken') o.dropSpin = (o.dropSpin || 0) + dt * (o.type === 'drop_shuriken' ? 9 : 6);
         if (o.laser && o.laser.life > 0) o.laser.life -= dt;
         if (o.shot && o.shot.life > 0) moveShot(o.shot, dt);
         for (const s of o.shots) if (s.life > 0) moveShot(s, dt);
@@ -387,6 +388,9 @@
       if (o.type === 'sweep' && segHit(laserSegment(o), px, py, r + 7)) return true;
       if (o.type === 'sword' && swordHit(o, px, py, r)) return true;
       if (o.type === 'zone' && zoneHit(o, px, py, r)) return true;
+      if (o.type === 'shuriken' && shurikenHit(o, px, py, r)) return true;
+      if (o.type === 'drop_shuriken' && dropShurikenHit(o, px, py, r)) return true;
+      if (o.type === 'slash_gate' && slashGateHit(o, px, py, r)) return true;
       if (o.type === 'mines' && mineCenters(o).some(m => Math.hypot(px - m.x, py - m.y) < r + m.r)) return true;
       if (o.type === 'claw' && clawHit(o, px, py, r)) return true;
       if (o.type === 'saw' && sawCenters(o).some(m => Math.hypot(px - m.x, py - m.y) < r + o.size * .2)) return true;
@@ -518,6 +522,9 @@
       if (o.type === 'sniper') drawSniper(o);
       if (o.type === 'sword') drawSword(o);
       if (o.type === 'zone') drawZone(o);
+      if (o.type === 'shuriken') drawShuriken(o);
+      if (o.type === 'drop_shuriken') drawDropShuriken(o);
+      if (o.type === 'slash_gate') drawSlashGate(o);
       if (o.type === 'mines') drawMines(o);
       if (o.type === 'claw') drawClaw(o);
       if (o.type === 'saw') drawSaw(o);
@@ -767,6 +774,79 @@
       }
       ctx.restore();
     }
+    function drawShuriken(o) {
+      const c = shurikenCenter(o);
+      drawShurikenBlade(c.x, c.y, c.r, (o.dropSpin || 0) + o.phase, `hsl(${o.hue + 70}, 100%, 62%)`);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `hsla(${o.hue + 70},100%,70%,.28)`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.w * .5, o.gapY, o.w * .55, o.gapH * .32, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function drawDropShuriken(o) {
+      const c = dropShurikenCenter(o);
+      drawShurikenBlade(c.x, c.y, c.r, (o.dropSpin || 0) + o.phase, '#ffcf66');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,210,90,.28)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 12]);
+      line(c.x, 0, c.x, state.h);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    function drawShurikenBlade(x, y, r, spin, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(spin);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = color;
+      ctx.strokeStyle = 'rgba(255,255,255,.72)';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+      for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(r, -11);
+        ctx.lineTo(r * .55, 0);
+        ctx.lineTo(r, 11);
+        ctx.lineTo(0, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#05060a';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * .22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    function drawSlashGate(o) {
+      const parts = slashGateSegments(o);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const s of parts) {
+        ctx.strokeStyle = s.active ? 'rgba(255,255,255,.58)' : 'rgba(255,255,255,.18)';
+        ctx.lineWidth = s.active ? 18 : 7;
+        line(s.ax, s.ay, s.bx, s.by);
+        ctx.strokeStyle = s.active ? '#ff46e9' : 'rgba(255,70,233,.42)';
+        ctx.lineWidth = s.active ? 6 : 3;
+        ctx.shadowColor = '#ff46e9';
+        ctx.shadowBlur = s.active ? 24 : 8;
+        line(s.ax, s.ay, s.bx, s.by);
+      }
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.beginPath();
+      ctx.arc(o.x + o.w * .5, o.gapY, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     function drawMines(o) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -940,6 +1020,12 @@
     function swordHit(o,px,py,r){const s=swordState(o);if(!s.active||Math.abs(px-s.cx)>r+13)return false;return s.fromTop?py+r>s.baseY&&py-r<s.tipY:py-r<s.baseY&&py+r>s.tipY;}
     function zoneState(o){const time=performance.now()*.004,phase=(Math.sin(time*1.4+o.phase)+1)*.5,hot=phase>.68,y=o.gapY+Math.sin(o.phase*1.7)*o.gapH*.24,h=24+o.size*.08,x=o.x-12,w=o.w+24;return{x,y,w,h,hot,phase};}
     function zoneHit(o,px,py,r){const z=zoneState(o);return z.hot&&px+r>z.x&&px-r<z.x+z.w&&py+r>z.y-z.h*.5&&py-r<z.y+z.h*.5;}
+    function shurikenCenter(o){const time=performance.now()*.0038+o.phase,cx=o.x+o.w*.5+Math.cos(time*1.2)*o.w*.28,cy=o.gapY+Math.sin(time*1.7)*o.gapH*.34;return{x:cx,y:cy,r:o.size*.18};}
+    function dropShurikenCenter(o){const travel=Math.max(0,state.w-o.x+o.phase*24),x=o.x+o.w*.5+Math.sin(o.phase*3.1)*28,y=((travel*1.22)%(state.h+180))-90;return{x,y,r:o.size*.16};}
+    function slashGateSegments(o){const time=performance.now()*.0036+o.phase,hot=(Math.sin(time*1.4)+1)*.5>.42,len=Math.min(280,o.gapH*1.55),cx=o.x+o.w*.5,cy=o.gapY,spread=o.w*.34;return[-1,0,1].map((n,i)=>{const a=(i-1)*.72+Math.sin(time+n)*.42,dx=Math.cos(a)*len*.5,dy=Math.sin(a)*len*.5,ox=n*spread*.42;return{ax:cx+ox-dx,ay:cy-dy,bx:cx+ox+dx,by:cy+dy,active:hot};});}
+    function shurikenHit(o,px,py,r){const c=shurikenCenter(o);return Math.hypot(px-c.x,py-c.y)<r+c.r*.72;}
+    function dropShurikenHit(o,px,py,r){const c=dropShurikenCenter(o);return Math.hypot(px-c.x,py-c.y)<r+c.r*.72;}
+    function slashGateHit(o,px,py,r){return slashGateSegments(o).some(s=>s.active&&segHit(s,px,py,r+8));}
     function mineCenters(o){const out=[];for(let i=0;i<5;i++){const a=o.phase+i*1.31;out.push({x:o.x+o.w*.15+i*o.w*.22,y:o.gapY+Math.sin(a)*o.gapH*.42,r:o.size*(.075+(i%2)*.02)});}return out;}
     function clawOpen(o){const close=(Math.sin(performance.now()*.0048*1.55+o.phase)+1)*.5;return o.gapH*(.48-close*.28);}
     function clawHit(o,px,py,r){if(px+r<o.x||px-r>o.x+o.w)return false;return Math.abs(py-o.gapY)>clawOpen(o)-r;}
