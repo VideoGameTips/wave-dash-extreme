@@ -167,6 +167,11 @@
       { name: 'Abyss Engine', type: 'missiles', hue: 326 },
       { name: 'Obsidian Monarch', type: 'lasers', hue: 0 },
       { name: 'Glitched God', type: 'missiles', hue: 300 },
+      { name: 'Blade Seraph', type: 'blades', hue: 45 },
+      { name: 'Solar Executioner', type: 'core', hue: 58 },
+      { name: 'Static Leviathan', type: 'lasers', hue: 182 },
+      { name: 'Meteor Duchess', type: 'spikes', hue: 18 },
+      { name: 'Omega Warden', type: 'core', hue: 252 },
     ];
 
     const state = {
@@ -175,6 +180,7 @@
       trail: [], obstacles: [], flashUntil: 0, darknessUntil: 0, bossNextAt: 4200,
       extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
       last: 0, crashed: false, realmName: '', bossRush: false, bossIndex: 0, bossClears: 0,
+      deflectUntil: 0, deflectReadyAt: 0,
     };
 
     function resize() {
@@ -217,6 +223,7 @@
         y: state.h * 0.52, vy: 0, active: true, crashed: false, dist: 0, nextX: state.w + 120,
         gapY: state.h * 0.52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: 0,
         darknessUntil: 0, bossNextAt: 4200, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
+        deflectUntil: 0, deflectReadyAt: 0,
       });
       for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
@@ -230,6 +237,7 @@
         y: state.h * .52, vy: 0, active: true, crashed: false, bossRush: true, bossIndex: 0, bossClears: 0,
         dist: 1400, nextX: state.w + 220, gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [],
         flashUntil: performance.now() + 260, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
+        deflectUntil: 0, deflectReadyAt: 0,
       });
       spawnBossRushBoss();
       menu.style.display = 'none';
@@ -252,7 +260,7 @@
         phase: Math.random() * Math.PI * 2,
         hue: spec.hue + level * 10,
         realmFire: realm.fire,
-        fired: false,
+        fired: true,
         armedAt: 0,
         targetY: 0,
         shot: null,
@@ -466,6 +474,14 @@
           o.bossSpikes.push({ x: b.cx - b.size * .52, y, vx: -(560 + level * 24), vy: Math.sin(o.phase + i) * 90, warn: .46, life: 1.55, r: 18 + Math.min(10, level) });
         }
       }
+      if (o.rushType === 'blades' && o.specialAt > Math.max(.50, .82 - level * .022)) {
+        o.specialAt = 0;
+        const count = 3 + Math.min(3, Math.floor(level / 3));
+        for (let i = 0; i < count; i++) {
+          const y = 52 + i / Math.max(1, count - 1) * (state.h - 104);
+          o.bossSpikes.push({ x: b.cx - b.size * .52, y, vx: -(500 + level * 22), vy: (i % 2 ? -1 : 1) * (150 + level * 8), warn: .34, life: 1.65, r: 15 + Math.min(8, level), blade: true });
+        }
+      }
       if (o.rushType === 'lasers' && o.specialAt > Math.max(.62, 1.0 - level * .02) && !o.bossBeam) {
         o.specialAt = 0;
         o.bossBeam = { y: clamp(36 + Math.random() * (state.h - 72), 42, state.h - 42), warn: Math.max(.18, .34 - level * .01), life: 0 };
@@ -476,6 +492,16 @@
         for (let i = 0; i < count; i++) {
           const y = b.cy + (i - (count - 1) / 2) * 26;
           o.shots.push({ x: b.cx - b.size * .48, y, vx: -260 - level * 12, vy: (Math.random() - .5) * 130, life: 3.2, kind: 'missile', turn: .9 + level * .04 });
+        }
+      }
+      if (o.rushType === 'core' && o.specialAt > Math.max(.54, .9 - level * .02)) {
+        o.specialAt = 0;
+        if (Math.floor(o.bossTimer * 2 + level) % 2 === 0 && !o.bossBeam) {
+          o.bossBeam = { y: clamp(36 + Math.random() * (state.h - 72), 42, state.h - 42), warn: Math.max(.18, .30 - level * .008), life: 0 };
+        } else {
+          for (let i = 0; i < 3; i++) {
+            o.shots.push({ x: b.cx - b.size * .48, y: b.cy + (i - 1) * 32, vx: -290 - level * 12, vy: (i - 1) * 80, life: 3.1, kind: 'missile', turn: .75 + level * .035 });
+          }
         }
       }
     }
@@ -524,8 +550,22 @@
         const b = bossCenter(o);
         if (diamond(px, py, r, b.cx, b.cy, b.size * .48, b.size * .38)) return true;
         if (o.bossBeam && o.bossBeam.life > 0 && Math.abs(py - o.bossBeam.y) < r + 12) return true;
-        if (o.shots.some(s => s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + (s.kind === 'missile' ? 12 : 7))) return true;
-        if (o.bossSpikes?.some(s => s.warn <= 0 && s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + s.r)) return true;
+        for (const s of o.shots) {
+          if (s.life <= 0) continue;
+          const rad = r + (s.kind === 'missile' ? 12 : 7);
+          if (Math.hypot(px - s.x, py - s.y) < rad) {
+            if (tryDeflectBossThreat(o, s, px, py, rad + 26)) return false;
+            return true;
+          }
+        }
+        if (o.bossSpikes) for (const s of o.bossSpikes) {
+          if (s.warn > 0 || s.life <= 0) continue;
+          const rad = r + s.r;
+          if (Math.hypot(px - s.x, py - s.y) < rad) {
+            if (tryDeflectBossThreat(o, s, px, py, rad + 26)) return false;
+            return true;
+          }
+        }
       }
       if (o.type === 'sniper' && o.laser && o.laser.life > 0 && Math.abs(py - o.laser.y) < r + 7) return true;
       if ((o.type === 'shooter' || o.type === 'burst') && projectileHit(o, px, py, r)) return true;
@@ -547,6 +587,7 @@
       drawDarkness();
       drawTrail();
       drawShip(false);
+      drawDeflectFx();
       drawRealmBanner(realm);
       if (performance.now() < state.flashUntil) {
         ctx.globalCompositeOperation = realm.flashOff ? 'source-over' : 'difference';
@@ -555,6 +596,61 @@
         ctx.globalCompositeOperation = 'source-over';
       }
       drawShip(true);
+    }
+
+    function activateDeflect() {
+      const now = performance.now();
+      if (now < state.deflectReadyAt) return;
+      state.deflectUntil = now + 200;
+      state.deflectReadyAt = now + 5000;
+      flash(70);
+    }
+
+    function deflectActive() {
+      return performance.now() < state.deflectUntil;
+    }
+
+    function damageBoss(o, amount = 1) {
+      if (!o?.rush || o.hp <= 0) return;
+      o.hp -= amount;
+      o.bossTimer = 0;
+      o.armedAt = 0;
+      o.shots = [];
+      o.bossSpikes = [];
+      o.bossBeam = null;
+      o.bossPattern = (o.bossPattern + 1) % 3;
+      o.phase += 1.37;
+      flash(o.hp <= 0 ? 360 : 160);
+      if (o.hp <= 0) advanceBossRush();
+    }
+
+    function tryDeflectBossThreat(o, threat, px, py, radius) {
+      if (!deflectActive() || !o?.rush || !threat || threat.life <= 0) return false;
+      if (Math.hypot(px - threat.x, py - threat.y) > radius) return false;
+      threat.life = 0;
+      damageBoss(o, threat.kind === 'missile' ? 1 : 1);
+      return true;
+    }
+
+    function drawDeflectFx() {
+      const now = performance.now();
+      const active = now < state.deflectUntil;
+      const cd = Math.max(0, state.deflectReadyAt - now);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      if (active) {
+        const t = (state.deflectUntil - now) / 200;
+        ctx.strokeStyle = `rgba(102,247,255,${.35 + t * .55})`;
+        ctx.lineWidth = 4 + t * 7;
+        ctx.beginPath();
+        ctx.arc(state.px, state.y, 30 + (1 - t) * 18, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.textAlign = 'left';
+      ctx.font = '800 11px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.fillStyle = cd > 0 ? 'rgba(255,255,255,.42)' : '#66f7ff';
+      ctx.fillText(cd > 0 ? `C DEFLECT ${Math.ceil(cd / 1000)}s` : 'C DEFLECT READY', 22, state.h - 42);
+      ctx.restore();
     }
 
     function drawRealmBanner(realm) {
@@ -793,6 +889,15 @@
         ctx.lineTo(-b.size * .28, 0);
         ctx.lineTo(-b.size * .46, -b.size * .24);
         ctx.lineTo(b.size * .16, -b.size * .32);
+      } else if (type === 'blades') {
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2 + Math.PI / 8;
+          const rr = i % 2 ? b.size * .18 : b.size * .62;
+          const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+      } else if (type === 'core') {
+        ctx.arc(0, 0, b.size * .42, 0, Math.PI * 2);
       } else {
         ctx.moveTo(0, -b.size * .38);
         ctx.lineTo(b.size * .48, 0);
@@ -814,6 +919,13 @@
           ctx.arc(-b.size * .24, i * b.size * .16, 8, 0, Math.PI * 2);
           ctx.fill();
         }
+      }
+      if (type === 'core') {
+        ctx.strokeStyle = 'rgba(255,255,255,.45)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, b.size * .24 + Math.sin(performance.now() * .01) * 5, 0, Math.PI * 2);
+        ctx.stroke();
       }
       ctx.restore();
     }
@@ -1322,6 +1434,10 @@
     addEventListener('pointerup', () => setHolding(false));
     addEventListener('keydown', e => {
       if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); setHolding(true); }
+      if (e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        activateDeflect();
+      }
       if (e.key === '\\') {
         e.preventDefault();
         startBossRush();
