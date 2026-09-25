@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wave Dash Extreme</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --cyan: #66f7ff;
+      --pink: #ff4ecf;
+      --red: #ff245c;
+      --ink: #070913;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #03040a;
+      color: white;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #080a14;
+    }
+    .hud {
+      position: fixed;
+      inset: 18px 18px auto 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+      text-shadow: 0 2px 14px rgba(0,0,0,.85);
+    }
+    .score {
+      font-weight: 900;
+      letter-spacing: .08em;
+      font-size: clamp(18px, 3vw, 34px);
+    }
+    .mode {
+      padding: 8px 11px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(6,8,18,.56);
+      font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--cyan);
+      text-align: right;
+    }
+    .menu {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 30% 40%, rgba(255,78,207,.20), transparent 34%),
+        radial-gradient(circle at 70% 60%, rgba(102,247,255,.15), transparent 36%),
+        rgba(2,3,9,.82);
+    }
+    .panel {
+      width: min(560px, 94vw);
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(5,7,16,.86);
+      box-shadow: 0 28px 80px rgba(0,0,0,.58);
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(34px, 8vw, 72px);
+      line-height: .88;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+    p {
+      margin: 0 0 18px;
+      color: rgba(255,255,255,.72);
+      line-height: 1.45;
+    }
+    .trails {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin: 16px 0 18px;
+    }
+    button {
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: white;
+      padding: 11px 10px;
+      font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      cursor: pointer;
+    }
+    button:hover, button.active { border-color: var(--cyan); background: rgba(102,247,255,.16); }
+    .start {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(90deg, rgba(102,247,255,.25), rgba(255,78,207,.25));
+      font-size: 15px;
+    }
+    .hint {
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,.56);
+    }
+    @media (max-width: 560px) {
+      .trails { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hud { inset: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <div>
+      <div class="score" id="score">0</div>
+      <div id="best">BEST 0</div>
+    </div>
+    <div class="mode" id="mode">NORMAL</div>
+  </div>
+  <div class="menu" id="menu">
+    <div class="panel">
+      <h1>Wave Dash Extreme</h1>
+      <p>Hold mouse, touch, or Space to climb. Release to dive. Survive the spikes, lasers, traps, blackouts, and giant right-side bosses.</p>
+      <div class="trails" id="trails"></div>
+      <button class="start" id="start">START RUN</button>
+      <div class="hint">Press / three times in one second to force Extreme Demon.</div>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const modeEl = document.getElementById('mode');
+    const menu = document.getElementById('menu');
+    const startBtn = document.getElementById('start');
+    const trailsEl = document.getElementById('trails');
+
+    const trailThemes = {
+      comet: { name: 'Comet', hues: [185, 196, 210] },
+      inferno: { name: 'Inferno', hues: [14, 34, 52] },
+      toxic: { name: 'Toxic', hues: [94, 126, 152] },
+      royal: { name: 'Royal', hues: [264, 286, 312] },
+      void: { name: 'Void', hues: [326, 352, 18] },
+    };
+
+    const state = {
+      w: 0, h: 0, px: 112, y: 240, vy: 0, holding: false, active: false,
+      dist: 0, nextX: 0, gapY: 240, spawnIndex: 0, best: Number(localStorage.wave_dash_extreme_best || 0),
+      trail: [], obstacles: [], flashUntil: 0, darknessUntil: 0, bossNextAt: 4200,
+      extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
+      last: 0, crashed: false,
+    };
+
+    function resize() {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      state.w = Math.floor(innerWidth);
+      state.h = Math.floor(innerHeight);
+      canvas.width = Math.floor(state.w * dpr);
+      canvas.height = Math.floor(state.h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      state.px = Math.max(82, Math.min(128, state.w * 0.16));
+    }
+
+    function difficulty() {
+      const score = state.dist / 10;
+      const demon = state.extreme ? 1 : Math.max(0, Math.min(1, (score - 1800) / 2400));
+      return {
+        demon,
+        speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1),
+        gap: Math.max(106, 205 - Math.min(86, state.dist * 0.0065) - demon * 22),
+        spacing: Math.max(162, 330 - Math.min(96, state.dist * 0.0048) - demon * 28),
+        width: 88 + demon * 16,
+        size: 116 + demon * 20,
+      };
+    }
+
+    function reset() {
+      resize();
+      Object.assign(state, {
+        y: state.h * 0.52, vy: 0, active: true, crashed: false, dist: 0, nextX: state.w + 120,
+        gapY: state.h * 0.52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: 0,
+        darknessUntil: 0, bossNextAt: 4200, last: performance.now(),
+      });
+      for (let i = 0; i < 7; i++) spawnObstacle();
+      menu.style.display = 'none';
+      requestAnimationFrame(frame);
+    }
+
+    function spawnObstacle() {
+      const d = difficulty();
+      const travel = d.spacing / Math.max(1, d.speed);
+      const maxRise = travel * 410 * .95;
+      const margin = d.gap * .55 + 32;
+      state.spawnIndex++;
+      const slam = state.spawnIndex % 3 === 0;
+      const sign = state.gapY < state.h * .5 ? 1 : -1;
+      const drift = slam ? sign * (0.62 + Math.random() * .34) * maxRise : (Math.random() * 2 - 1) * maxRise * .86;
+      state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
+      const roll = Math.random();
+      const bossDue = state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
+      if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
+      const type = bossDue ? 'boss'
+        : state.extreme ? pick(roll, ['sniper','sword','zone','burst','saw','claw','boss','mines','sweep','spinner'])
+        : pick(roll, ['top','bottom','dual','diamond','spinner','sweep','burst','shooter','sword','zone','mines','claw','blackout','sniper']);
+      state.obstacles.push({
+        x: state.nextX, w: d.width, gapY: state.gapY, gapH: d.gap, size: d.size, type,
+        spin: Math.random() * Math.PI, phase: Math.random() * Math.PI * 2, hue: 185 + Math.sin(state.dist * .003) * 36,
+        fired: false, armedAt: 0, targetY: 0, shot: null, shots: [], laser: null, bossTimer: 0,
+        bossPattern: Math.floor(Math.random() * 3), bossBeam: null,
+      });
+      state.nextX += d.spacing + Math.random() * 44;
+    }
+
+    function pick(r, list) {
+      const i = Math.min(list.length - 1, Math.floor(r * list.length));
+      return list[i];
+    }
+
+    function frame(now) {
+      if (!state.active) return;
+      const dt = Math.min(.033, Math.max(.001, (now - state.last) / 1000 || .016));
+      state.last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    function update(dt) {
+      const d = difficulty();
+      state.vy = state.holding ? -410 : 410;
+      state.y += state.vy * dt;
+      state.dist += d.speed * dt;
+      state.nextX -= d.speed * dt;
+      addTrail(dt);
+      for (const o of state.obstacles) {
+        if (o.type === 'boss' && o.fired) o.x = Math.max(o.x - d.speed * dt * .18, state.w - Math.max(160, o.size * 1.24));
+        else o.x -= d.speed * dt;
+      }
+      hazards(dt);
+      while (state.obstacles.length && done(state.obstacles[0])) state.obstacles.shift();
+      while (state.nextX < state.w + 260) spawnObstacle();
+      if (state.y < 18 || state.y > state.h - 18) crash();
+      for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash();
+      scoreEl.textContent = Math.floor(state.dist / 10);
+      modeEl.textContent = state.extreme ? 'EXTREME DEMON' : difficulty().demon > 0 ? 'DEMON' : 'NORMAL';
+      modeEl.style.color = state.extreme ? '#ff245c' : difficulty().demon > 0 ? '#ff66cc' : '#66f7ff';
+    }
+
+    function hazards(dt) {
+      for (const o of state.obstacles) {
+        if ((o.type === 'shooter' || o.type === 'burst') && !o.fired && o.x < state.w * .92 && o.x > state.px + 28) {
+          fireAtWave(o, o.type === 'burst');
+        }
+        if (o.type === 'sniper' && !o.fired && o.x < state.w * .84 && o.x > state.px + 18) {
+          o.fired = true; o.armedAt = performance.now() + 430;
+          o.targetY = clamp(state.y + state.vy * .18, 30, state.h - 30);
+          flash(70);
+        }
+        if (o.type === 'sniper' && o.fired && !o.laser && performance.now() >= o.armedAt) {
+          o.laser = { y: o.targetY, life: .24 };
+          flash(120);
+        }
+        if (o.type === 'boss') updateBoss(o, dt);
+        if (o.laser && o.laser.life > 0) o.laser.life -= dt;
+        if (o.shot && o.shot.life > 0) moveShot(o.shot, dt);
+        for (const s of o.shots) if (s.life > 0) moveShot(s, dt);
+      }
+    }
+
+    function fireAtWave(o, beam) {
+      o.fired = true;
+      const sx = o.x + o.w * .5;
+      const sy = o.gapY + (Math.random() < .5 ? -1 : 1) * o.gapH * .42;
+      const dx = state.px - sx;
+      const lead = (sx - state.px) / 760;
+      const dy = state.y + state.vy * lead * .7 - sy;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const speed = beam ? 940 : 760;
+      o.shot = { x: sx, y: sy, vx: dx / len * speed, vy: dy / len * speed, life: beam ? .62 : 1.14, beam };
+      if (!beam) for (const spread of [-.16, .16]) {
+        const ca = Math.cos(spread), sa = Math.sin(spread);
+        o.shots.push({ x: sx, y: sy, vx: (dx / len * ca - dy / len * sa) * 690, vy: (dx / len * sa + dy / len * ca) * 690, life: 1.05 });
+      }
+      flash(85);
+    }
+
+    function updateBoss(o, dt) {
+      o.armedAt += dt;
+      if (o.fired) o.bossTimer += dt;
+      if (!o.fired && o.x < state.w * .88) {
+        o.fired = true; o.armedAt = 0; o.bossTimer = 0; flash(220);
+      }
+      const delay = state.extreme ? .72 : .92;
+      const limit = state.extreme ? 14 : 10;
+      if (o.fired && o.bossTimer < 5.4 && o.armedAt > delay && o.shots.length < limit) {
+        o.armedAt = 0;
+        const b = bossCenter(o);
+        const sx = b.cx - b.size * .42;
+        const sy = b.cy + Math.sin(o.bossTimer * 2.4 + o.phase) * o.gapH * .32;
+        const base = Math.PI + Math.sin(o.bossTimer * 1.7 + o.phase) * .36;
+        const offsets = o.bossPattern === 0 ? [-.38, 0, .38] : o.bossPattern === 1 ? [-.52, -.18, .18, .52] : [-.66, 0, .66];
+        for (const off of offsets) {
+          if (o.shots.length >= limit) break;
+          const a = base + off;
+          o.shots.push({ x: sx, y: sy, vx: Math.cos(a) * 470, vy: Math.sin(a) * 470, life: 1.65 });
+        }
+        if (!o.bossBeam && (o.bossPattern === 1 || Math.floor(o.bossTimer / delay) % 2 === 0)) {
+          o.bossBeam = { y: clamp(b.cy + Math.sin(o.bossTimer * 1.15 + o.phase) * o.gapH * .48, 42, state.h - 42), warn: .36, life: 0 };
+        }
+      }
+      if (o.bossBeam) {
+        if (o.bossBeam.warn > 0) o.bossBeam.warn -= dt;
+        else {
+          if (o.bossBeam.life <= 0) { o.bossBeam.life = state.extreme ? .34 : .26; flash(130); }
+          o.bossBeam.life -= dt;
+          if (o.bossBeam.life <= 0) o.bossBeam = null;
+        }
+      }
+    }
+
+    function moveShot(s, dt) { s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; }
+    function flash(ms) { state.flashUntil = Math.max(state.flashUntil, performance.now() + ms); }
+    function done(o) {
+      if (o.type === 'boss' && o.fired) {
+        if (o.bossTimer < 6.2) return false;
+        if (o.bossBeam && (o.bossBeam.warn > 0 || o.bossBeam.life > 0)) return false;
+        if (o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80)) return false;
+        return true;
+      }
+      if (o.x + o.w >= -70) return false;
+      if (o.shot && o.shot.life > 0 && o.shot.x > -40) return false;
+      if (o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80)) return false;
+      if (o.laser && o.laser.life > 0) return false;
+      return true;
+    }
+
+    function addTrail(dt) {
+      const theme = trailThemes[state.trailTheme] || trailThemes.comet;
+      const count = Math.max(2, Math.min(7, Math.ceil(dt * 160)));
+      for (let i = 0; i < count; i++) {
+        const hue = theme.hues[Math.floor(Math.random() * theme.hues.length)] + (Math.random() - .5) * 18;
+        state.trail.push({ x: state.px - i * 4 - Math.random() * 10, y: state.y + (Math.random() - .5) * 12, vx: -170 - Math.random() * 170, vy: -state.vy * .05 + (Math.random() - .5) * 36, age: 0, life: .34 + Math.random() * .34, r: 2.4 + Math.random() * 5.8, hue });
+      }
+      for (const p of state.trail) { p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; }
+      while (state.trail.length > 210 || (state.trail[0] && state.trail[0].age > state.trail[0].life)) state.trail.shift();
+    }
+
+    function hit(o, px, py, r) {
+      const top = o.gapY - o.gapH * .5, bot = o.gapY + o.gapH * .5;
+      if ((o.type === 'top' || o.type === 'dual') && tri(px, py, r, o.x, 0, o.w, top, true)) return true;
+      if ((o.type === 'bottom' || o.type === 'dual') && tri(px, py, r, o.x, state.h, o.w, bot, false)) return true;
+      if (o.type === 'diamond' && (diamond(px, py, r, o.x + o.w * .5, Math.max(52, top - o.size * .42), o.size * .36, o.size * .27) || diamond(px, py, r, o.x + o.w * .5, Math.min(state.h - 52, bot + o.size * .42), o.size * .36, o.size * .27))) return true;
+      if (o.type === 'spinner' && spinnerHit(o, px, py, r)) return true;
+      if (o.type === 'sweep' && Math.abs(angleDiff(Math.atan2(py - o.gapY, px - (o.x + o.w * .5)), performance.now() * .0032 + o.phase)) < .09 && Math.hypot(px - (o.x + o.w * .5), py - o.gapY) < o.size * .62) return true;
+      if (o.type === 'sword' && swordHit(o, px, py, r)) return true;
+      if (o.type === 'zone' && zoneHit(o, px, py, r)) return true;
+      if (o.type === 'mines' && mineCenters(o).some(m => Math.hypot(px - m.x, py - m.y) < r + m.r)) return true;
+      if (o.type === 'claw' && clawHit(o, px, py, r)) return true;
+      if (o.type === 'saw' && sawCenters(o).some(m => Math.hypot(px - m.x, py - m.y) < r + o.size * .2)) return true;
+      if (o.type === 'boss') {
+        const b = bossCenter(o);
+        if (diamond(px, py, r, b.cx, b.cy, b.size * .48, b.size * .38)) return true;
+        if (o.bossBeam && o.bossBeam.life > 0 && Math.abs(py - o.bossBeam.y) < r + 12) return true;
+        if (o.shots.some(s => s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + 7)) return true;
+      }
+      if (o.type === 'sniper' && o.laser && o.laser.life > 0 && Math.abs(py - o.laser.y) < r + 7) return true;
+      if ((o.type === 'shooter' || o.type === 'burst') && projectileHit(o, px, py, r)) return true;
+      return false;
+    }
+
+    function draw() {
+      const w = state.w, h = state.h;
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#080a14'); g.addColorStop(.52, '#111a30'); g.addColorStop(1, '#090b12');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(102,247,255,.12)'; ctx.lineWidth = 1;
+      const grid = 42, off = -(state.dist * .22) % grid;
+      for (let x = off; x < w; x += grid) line(x, 0, x, h);
+      for (let y = 0; y < h; y += grid) line(0, y, w, y);
+      for (const o of state.obstacles) drawObstacle(o);
+      drawTrail();
+      drawShip();
+      drawDarkness();
+      if (performance.now() < state.flashUntil) {
+        ctx.globalCompositeOperation = 'difference';
+        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+
+    function drawObstacle(o) {
+      const top = o.gapY - o.gapH * .5, bot = o.gapY + o.gapH * .5;
+      ctx.save();
+      ctx.fillStyle = `hsl(${o.hue}, 92%, 57%)`;
+      ctx.strokeStyle = 'rgba(255,255,255,.52)';
+      ctx.lineWidth = 2;
+      if (o.type === 'top' || o.type === 'dual') poly([[o.x,0],[o.x+o.w*.5,top],[o.x+o.w,0]], true);
+      if (o.type === 'bottom' || o.type === 'dual') poly([[o.x,state.h],[o.x+o.w*.5,bot],[o.x+o.w,state.h]], true);
+      if (o.type === 'diamond') { drawDiamond(o.x+o.w*.5, Math.max(52, top-o.size*.42), o.size*.36, o.size*.27, o.hue+24); drawDiamond(o.x+o.w*.5, Math.min(state.h-52, bot+o.size*.42), o.size*.36, o.size*.27, o.hue+24); }
+      if (o.type === 'spinner') drawSpinner(o);
+      if (o.type === 'sweep') drawSweep(o);
+      if (o.type === 'burst' || o.type === 'shooter') drawShooter(o);
+      if (o.type === 'sniper') drawSniper(o);
+      if (o.type === 'sword') drawSword(o);
+      if (o.type === 'zone') drawZone(o);
+      if (o.type === 'mines') drawMines(o);
+      if (o.type === 'claw') drawClaw(o);
+      if (o.type === 'saw') drawSaw(o);
+      if (o.type === 'blackout') { state.darknessUntil = Math.max(state.darknessUntil, performance.now() + 1900); drawDiamond(o.x+o.w*.5, o.gapY, o.size*.36, o.size*.36, 0); }
+      if (o.type === 'boss') drawBoss(o);
+      ctx.restore();
+    }
+
+    function drawShip() {
+      ctx.save();
+      ctx.translate(state.px, state.y);
+      ctx.rotate(state.vy < 0 ? -.62 : .62);
+      ctx.shadowColor = '#66f7ff'; ctx.shadowBlur = 18;
+      ctx.fillStyle = '#f7fbff'; ctx.strokeStyle = '#05131f'; ctx.lineWidth = 3;
+      poly([[18,0],[-12,-10],[-6,0],[-12,10]], true);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = state.vy < 0 ? '#66f7ff' : '#ff66dd';
+      poly([[-14,-6],[-28,0],[-14,6]], true);
+      ctx.restore();
+    }
+
+    function drawTrail() {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const p of state.trail) {
+        const a = Math.max(0, 1 - p.age / p.life);
+        ctx.fillStyle = `hsla(${p.hue},100%,62%,${a*.78})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (.55 + a), 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawBoss(o) {
+      const b = bossCenter(o);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      if (o.bossBeam) {
+        const warning = o.bossBeam.warn > 0;
+        ctx.strokeStyle = warning ? 'rgba(255,255,255,.42)' : 'rgba(255,35,120,.95)';
+        ctx.lineWidth = warning ? 3 : 22;
+        ctx.setLineDash(warning ? [18, 18] : []);
+        line(0, o.bossBeam.y, state.w, o.bossBeam.y);
+        ctx.setLineDash([]);
+        if (!warning) { ctx.strokeStyle = 'rgba(255,255,255,.72)'; ctx.lineWidth = 5; line(0, o.bossBeam.y, state.w, o.bossBeam.y); }
+      }
+      drawDiamond(b.cx, b.cy, b.size*.48, b.size*.38, o.hue+270);
+      ctx.strokeStyle = 'rgba(255,80,220,.35)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(b.cx, b.cy, b.size*.58 + Math.sin(performance.now()*.007 + o.phase)*6, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.cx, b.cy, b.size*.13 + Math.sin(performance.now()*.012)*3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#120018'; ctx.beginPath(); ctx.arc(b.cx + Math.sin(performance.now()*.006)*b.size*.035, b.cy, b.size*.055, 0, Math.PI*2); ctx.fill();
+      for (const s of o.shots) if (s.life > 0) drawProjectile(s, '#ff66dd');
+      ctx.restore();
+    }
+
+    function drawShooter(o) {
+      drawDiamond(o.x+o.w*.5, o.gapY + Math.sin(o.phase)*o.gapH*.36, o.size*.18, o.size*.18, o.hue+50);
+      if (o.shot && o.shot.life > 0) drawProjectile(o.shot, o.shot.beam ? '#fffb6a' : '#66f7ff');
+      for (const s of o.shots) if (s.life > 0) drawProjectile(s, '#66f7ff');
+    }
+    function drawSniper(o) {
+      const y = o.fired ? o.targetY : o.gapY;
+      ctx.strokeStyle = 'rgba(255,255,255,.24)'; ctx.lineWidth = 2; line(0, y, state.w, y);
+      drawDiamond(o.x+o.w*.5, y, o.size*.2, o.size*.14, o.hue+120);
+      if (o.laser && o.laser.life > 0) { ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 5; line(0, o.laser.y, state.w, o.laser.y); }
+    }
+    function drawProjectile(s, color) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.beam ? 8 : 6, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    function drawSpinner(o) {
+      const cx = o.x+o.w*.5, cy = o.gapY, time = performance.now()*.0045;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(time+o.phase);
+      ctx.strokeStyle = `hsl(${o.hue+70},100%,64%)`; ctx.lineWidth = 7;
+      for (let i=0;i<4;i++) { ctx.rotate(Math.PI/2); line(0,0,o.size*.5,0); }
+      ctx.restore();
+    }
+    function drawSweep(o) {
+      const cx=o.x+o.w*.5, cy=o.gapY, a=performance.now()*.0032+o.phase;
+      ctx.strokeStyle=`hsl(${o.hue+110},100%,60%)`; ctx.lineWidth=5; line(cx,cy,cx+Math.cos(a)*o.size*.62,cy+Math.sin(a)*o.size*.62);
+    }
+    function drawSword(o) {
+      const s = swordState(o);
+      ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 5; line(s.cx, s.cy-s.len*.5, s.cx, s.cy+s.len*.5);
+      ctx.strokeStyle = '#ff245c'; ctx.lineWidth = 10; line(s.x1,s.y1,s.x2,s.y2);
+    }
+    function drawZone(o) {
+      const z = zoneState(o);
+      ctx.fillStyle = z.hot ? 'rgba(255,36,92,.28)' : 'rgba(255,255,255,.08)';
+      ctx.fillRect(o.x - o.w*.35, z.y - z.h*.5, o.w*1.7, z.h);
+      ctx.strokeStyle = z.hot ? '#ff245c' : 'rgba(255,255,255,.28)'; ctx.lineWidth = 3;
+      ctx.strokeRect(o.x - o.w*.35, z.y - z.h*.5, o.w*1.7, z.h);
+    }
+    function drawMines(o) { for (const m of mineCenters(o)) drawDiamond(m.x,m.y,m.r,m.r, o.hue+170); }
+    function drawClaw(o) {
+      const slam = (Math.sin(performance.now()*.0048 + o.phase)+1)*.5;
+      const x = o.x+o.w*.5, len=o.size*(.34+slam*.5);
+      ctx.strokeStyle='#ff77dd'; ctx.lineWidth=8; for(let i=-1;i<=1;i++) line(x+i*18,0,x+i*8,len);
+    }
+    function drawSaw(o) {
+      for (const c of sawCenters(o)) {
+        ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(performance.now()*.006+c.x*.01); ctx.fillStyle='#ffbc42';
+        ctx.beginPath(); for(let i=0;i<14;i++){const a=i/14*Math.PI*2, rr=i%2?o.size*.14:o.size*.21, x=Math.cos(a)*rr,y=Math.sin(a)*rr; if(!i)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+    }
+
+    function drawDarkness() {
+      if (performance.now() > state.darknessUntil) return;
+      ctx.fillStyle = 'rgba(0,0,0,.68)';
+      ctx.fillRect(0, 0, state.w, state.h);
+      const g = ctx.createRadialGradient(state.px, state.y, 24, state.px, state.y, 170);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,.66)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, state.w, state.h);
+    }
+
+    function tri(px,py,r,x,base,w,tip,down) { if(px+r<x || px-r>x+w)return false; const cx=x+w*.5, half=w*.5; const t=Math.max(0,1-Math.abs(px-cx)/half); const edge=base+(tip-base)*t; return down ? py-r<edge : py+r>edge; }
+    function diamond(px,py,r,cx,cy,rx,ry) { return Math.abs(px-cx)/Math.max(1,rx+r)+Math.abs(py-cy)/Math.max(1,ry+r)<1; }
+    function spinnerHit(o,px,py,r){const cx=o.x+o.w*.5,cy=o.gapY,a=performance.now()*.0045+o.phase;for(let i=0;i<4;i++){const q=a+i*Math.PI/2;if(segDist(px,py,cx,cy,cx+Math.cos(q)*o.size*.5,cy+Math.sin(q)*o.size*.5)<r+5)return true;}return false;}
+    function swordState(o){const t=performance.now()*.0045+o.phase, slam=Math.max(0,Math.sin(t*1.6)), cx=o.x+o.w*.45, cy=o.gapY, len=o.size*(.62+slam*.44), a=-Math.PI*.5+slam*1.18;return{cx,cy,len,x1:cx+Math.cos(a)*len*.5,y1:cy+Math.sin(a)*len*.5,x2:cx-Math.cos(a)*len*.5,y2:cy-Math.sin(a)*len*.5};}
+    function swordHit(o,px,py,r){const s=swordState(o);return segDist(px,py,s.x1,s.y1,s.x2,s.y2)<r+8;}
+    function zoneState(o){const t=performance.now()*.004+o.phase, hot=Math.sin(t*1.8)>-.12;return{y:o.gapY+Math.sin(t)*o.gapH*.34,h:o.size*.18,hot};}
+    function zoneHit(o,px,py,r){const z=zoneState(o);return z.hot && px>o.x-o.w*.35-r && px<o.x+o.w*1.35+r && Math.abs(py-z.y)<r+z.h*.5;}
+    function mineCenters(o){const out=[];for(let i=0;i<5;i++){const a=o.phase+i*1.31;out.push({x:o.x+o.w*.15+i*o.w*.22,y:o.gapY+Math.sin(a)*o.gapH*.42,r:o.size*(.075+(i%2)*.02)});}return out;}
+    function clawHit(o,px,py,r){const slam=(Math.sin(performance.now()*.0048+o.phase)+1)*.5;if(slam<.46)return false;const x=o.x+o.w*.5,len=o.size*(.34+slam*.5);for(let i=-1;i<=1;i++)if(segDist(px,py,x+i*18,0,x+i*8,len)<r+7)return true;return false;}
+    function sawCenters(o){const out=[];for(let i=0;i<3;i++){out.push({x:o.x+i*o.w*.36,y:o.gapY+Math.sin(performance.now()*.006+o.phase+i)*o.gapH*.36});}return out;}
+    function projectileHit(o,px,py,r){const s=o.shot;if(s&&s.life>0){if(s.beam ? segDist(px,py,s.x-s.vx*.12,s.y-s.vy*.12,s.x,s.y)<r+8 : Math.hypot(px-s.x,py-s.y)<r+8)return true;}return o.shots.some(q=>q.life>0&&Math.hypot(px-q.x,py-q.y)<r+7);}
+    function bossCenter(o){const size=o.size*(state.extreme?1.58:1.36);return{size,cx:Math.min(o.x+o.w*.5,state.w-Math.max(104,size*.58)),cy:clamp(o.gapY,72,state.h-72)};}
+    function segDist(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,wx=px-ax,wy=py-ay,c=clamp((wx*vx+wy*vy)/Math.max(1,vx*vx+vy*vy),0,1);return Math.hypot(px-(ax+vx*c),py-(ay+vy*c));}
+    function angleDiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b));}
+    function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+    function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+    function poly(points, fill){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();if(fill)ctx.fill();ctx.stroke();}
+    function drawDiamond(cx,cy,rx,ry,hue){ctx.fillStyle=`hsl(${hue},95%,50%)`;ctx.strokeStyle='rgba(255,255,255,.64)';ctx.beginPath();ctx.moveTo(cx,cy-ry);ctx.lineTo(cx+rx,cy);ctx.lineTo(cx,cy+ry);ctx.lineTo(cx-rx,cy);ctx.closePath();ctx.fill();ctx.stroke();}
+
+    function crash() {
+      if (state.crashed) return;
+      state.crashed = true; state.active = false; flash(260);
+      const score = Math.floor(state.dist / 10);
+      if (score > state.best) { state.best = score; localStorage.wave_dash_extreme_best = String(score); }
+      bestEl.textContent = `BEST ${state.best}`;
+      setTimeout(() => { menu.style.display = 'grid'; }, 520);
+    }
+
+    function setHolding(v) { state.holding = v; }
+    addEventListener('resize', resize);
+    addEventListener('pointerdown', () => setHolding(true));
+    addEventListener('pointerup', () => setHolding(false));
+    addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); setHolding(true); }
+      if (e.key === '/') {
+        const now = performance.now();
+        state.slashTimes = state.slashTimes.filter(t => now - t < 1000);
+        state.slashTimes.push(now);
+        if (state.slashTimes.length >= 3) { state.extreme = true; flash(500); }
+      }
+    });
+    addEventListener('keyup', e => { if (e.code === 'Space' || e.key === 'ArrowUp') setHolding(false); });
+    startBtn.addEventListener('click', reset);
+    for (const [key, theme] of Object.entries(trailThemes)) {
+      const btn = document.createElement('button');
+      btn.textContent = theme.name;
+      btn.className = key === state.trailTheme ? 'active' : '';
+      btn.addEventListener('click', () => {
+        state.trailTheme = key;
+        localStorage.wave_dash_trail = key;
+        [...trailsEl.children].forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      trailsEl.appendChild(btn);
+    }
+    resize();
+    bestEl.textContent = `BEST ${state.best}`;
+    draw();
+  })();
+  </script>
+</body>
+</html>
