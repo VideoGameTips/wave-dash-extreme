@@ -150,14 +150,14 @@
     };
 
     const realms = [
-      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','sword','mines','shuriken','drop_shuriken','blackout','sniper'] },
-      { at: 450, name: 'Chrome Thunder', tag: 'HARD', hue: 210, accent: '#9cc7ff', bg: ['#070b16', '#121b2e', '#060812'], dark: .05, redLights: .08, fire: 0, speed: 1.03, gap: 6, pool: ['dual','diamond','spinner','sweep','sword','mines','sniper','top','bottom','claw','saw','shuriken','drop_shuriken','slash_gate'] },
-      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','slash_gate','sniper','dual','diamond','spinner','sweep','mines','claw','saw','shuriken','drop_shuriken','blackout'] },
-      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .22, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['blackout','sniper','sweep','spinner','slash_gate','sword','claw','saw','mines','diamond','boss','shuriken','drop_shuriken'] },
-      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','slash_gate','sniper','boss','dual','diamond','saw','claw','mines','blackout','sweep','shuriken','drop_shuriken'] },
-      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['slash_gate','sweep','sword','sniper','boss','saw','claw','mines','blackout','spinner','shuriken','drop_shuriken'] },
-      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','blackout','mines','sweep','spinner','shuriken','drop_shuriken'] },
-      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .56, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
+      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, lightsOut: 0, flashOff: false, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','sword','mines','shuriken','drop_shuriken','blackout','sniper'] },
+      { at: 450, name: 'Chrome Thunder', tag: 'HARD', hue: 210, accent: '#9cc7ff', bg: ['#070b16', '#121b2e', '#060812'], dark: .05, lightsOut: 0, flashOff: false, redLights: .08, fire: 0, speed: 1.03, gap: 6, pool: ['dual','diamond','spinner','sweep','sword','mines','sniper','top','bottom','claw','saw','shuriken','drop_shuriken','slash_gate'] },
+      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, lightsOut: .10, flashOff: false, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','slash_gate','sniper','dual','diamond','spinner','sweep','mines','claw','saw','shuriken','drop_shuriken','blackout'] },
+      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .46, lightsOut: .55, flashOff: true, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['blackout','sniper','sweep','spinner','slash_gate','sword','claw','saw','mines','diamond','boss','shuriken','drop_shuriken'] },
+      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, lightsOut: .22, flashOff: false, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','slash_gate','sniper','boss','dual','diamond','saw','claw','mines','blackout','sweep','shuriken','drop_shuriken'] },
+      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, lightsOut: .35, flashOff: true, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['slash_gate','sweep','sword','sniper','boss','saw','claw','mines','blackout','spinner','shuriken','drop_shuriken'] },
+      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, lightsOut: .42, flashOff: true, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','blackout','mines','sweep','spinner','shuriken','drop_shuriken'] },
+      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .66, lightsOut: .75, flashOff: true, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
     ];
 
     const state = {
@@ -422,8 +422,8 @@
       drawShip(false);
       drawRealmBanner(realm);
       if (performance.now() < state.flashUntil) {
-        ctx.globalCompositeOperation = 'difference';
-        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        ctx.globalCompositeOperation = realm.flashOff ? 'source-over' : 'difference';
+        ctx.fillStyle = realm.flashOff ? 'rgba(0,0,0,.88)' : 'rgba(255,255,255,.92)';
         ctx.fillRect(0, 0, w, h);
         ctx.globalCompositeOperation = 'source-over';
       }
@@ -497,6 +497,17 @@
       if (realm.dark > .01) {
         ctx.fillStyle = `rgba(0,0,0,${realm.dark * .52})`;
         ctx.fillRect(0, 0, state.w, state.h);
+      }
+      if (realm.lightsOut > .01) {
+        const flicker = Math.max(0, Math.sin(t * 2.6) * .55 + Math.sin(t * 7.4 + 1.7) * .28);
+        const pulse = Math.pow(flicker, 2.4) * realm.lightsOut;
+        ctx.fillStyle = `rgba(0,0,0,${Math.min(.86, .16 * realm.lightsOut + pulse * .72)})`;
+        ctx.fillRect(0, 0, state.w, state.h);
+        if (pulse > .18) {
+          ctx.fillStyle = `rgba(255,255,255,${pulse * .08})`;
+          ctx.font = '900 12px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.fillText('LIGHTS OUT', 22, state.h - 24);
+        }
       }
     }
 
