@@ -159,7 +159,15 @@
       { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, lightsOut: .42, flashOff: true, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','blackout','mines','sweep','spinner','shuriken','drop_shuriken'] },
       { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .66, lightsOut: .75, flashOff: true, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
     ];
-    const bossRushNames = ['Prism Tyrant', 'Crimson Maw', 'Void Regent', 'Infernal Crown', 'Abyss Engine', 'Obsidian Monarch', 'Glitched God'];
+    const bossRushTypes = [
+      { name: 'Prism Tyrant', type: 'prism', hue: 205 },
+      { name: 'Crimson Maw', type: 'spikes', hue: 8 },
+      { name: 'Void Regent', type: 'lasers', hue: 276 },
+      { name: 'Infernal Crown', type: 'spikes', hue: 28 },
+      { name: 'Abyss Engine', type: 'missiles', hue: 326 },
+      { name: 'Obsidian Monarch', type: 'lasers', hue: 0 },
+      { name: 'Glitched God', type: 'missiles', hue: 300 },
+    ];
 
     const state = {
       w: 0, h: 0, px: 112, y: 240, vy: 0, holding: false, active: false,
@@ -232,6 +240,7 @@
       const realm = currentRealm();
       const level = state.bossIndex;
       const hp = 3 + Math.floor(level / 2);
+      const spec = bossRushTypes[level % bossRushTypes.length];
       state.obstacles = [{
         x: state.w + 150,
         w: 116 + Math.min(48, level * 6),
@@ -241,7 +250,7 @@
         type: 'boss',
         spin: 0,
         phase: Math.random() * Math.PI * 2,
-        hue: realm.hue + level * 18,
+        hue: spec.hue + level * 10,
         realmFire: realm.fire,
         fired: false,
         armedAt: 0,
@@ -252,9 +261,11 @@
         bossTimer: 0,
         bossPattern: level % 3,
         bossBeam: null,
+        bossSpikes: [],
         rush: true,
         rushLevel: level,
-        rushName: bossRushNames[level % bossRushNames.length],
+        rushType: spec.type,
+        rushName: spec.name,
         hp,
         maxHp: hp,
       }];
@@ -354,6 +365,7 @@
         if (o.laser && o.laser.life > 0) o.laser.life -= dt;
         if (o.shot && o.shot.life > 0) moveShot(o.shot, dt);
         for (const s of o.shots) if (s.life > 0) moveShot(s, dt);
+        if (o.bossSpikes) for (const s of o.bossSpikes) moveBossSpike(s, dt);
       }
     }
 
@@ -384,7 +396,9 @@
       const delay = o.rush ? Math.max(.42, .78 - level * .035) : state.extreme ? .72 : .92;
       const limit = o.rush ? 12 + Math.min(14, level * 2) : state.extreme ? 14 : 10;
       const attackWindow = o.rush ? 4.4 + Math.min(1.8, level * .18) : 5.4;
-      if (o.fired && o.bossTimer < attackWindow && o.armedAt > delay && o.shots.length < limit) {
+      const type = o.rushType || 'prism';
+      if (o.rush && o.fired) updateBossRushSpecial(o, dt, level, attackWindow);
+      if (o.fired && o.bossTimer < attackWindow && o.armedAt > delay && o.shots.length < limit && type !== 'spikes') {
         o.armedAt = 0;
         const b = bossCenter(o);
         const sx = b.cx - b.size * .42;
@@ -394,9 +408,10 @@
         for (const off of offsets) {
           if (o.shots.length >= limit) break;
           const a = base + off;
-          o.shots.push({ x: sx, y: sy, vx: Math.cos(a) * (470 + level * 16), vy: Math.sin(a) * (470 + level * 16), life: 1.65 });
+          const speed = type === 'missiles' ? 310 + level * 10 : 470 + level * 16;
+          o.shots.push({ x: sx, y: sy, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: type === 'missiles' ? 2.9 : 1.65, kind: type === 'missiles' ? 'missile' : 'orb' });
         }
-        if (!o.bossBeam && (o.bossPattern === 1 || Math.floor(o.bossTimer / delay) % 2 === 0)) {
+        if (type !== 'missiles' && !o.bossBeam && (type === 'lasers' || o.bossPattern === 1 || Math.floor(o.bossTimer / delay) % 2 === 0)) {
           o.bossBeam = { y: clamp(b.cy + Math.sin(o.bossTimer * (1.15 + level * .04) + o.phase) * o.gapH * .48, 42, state.h - 42), warn: Math.max(.22, .36 - level * .012), life: 0 };
         }
       }
@@ -408,11 +423,12 @@
           if (o.bossBeam.life <= 0) o.bossBeam = null;
         }
       }
-      if (o.rush && o.fired && o.bossTimer >= attackWindow && !o.bossBeam && !o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80)) {
+      if (o.rush && o.fired && o.bossTimer >= attackWindow && !o.bossBeam && !o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80) && !o.bossSpikes?.some(s => s.life > 0 || s.warn > 0)) {
         o.hp--;
         o.bossTimer = 0;
         o.armedAt = 0;
         o.shots = [];
+        o.bossSpikes = [];
         o.bossPattern = (o.bossPattern + 1) % 3;
         o.phase += 1.37;
         flash(o.hp <= 0 ? 360 : 180);
@@ -420,7 +436,49 @@
       }
     }
 
-    function moveShot(s, dt) { s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; }
+    function moveShot(s, dt) {
+      if (s.kind === 'missile') {
+        const dx = state.px - s.x;
+        const dy = state.y - s.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const speed = Math.max(260, Math.hypot(s.vx, s.vy));
+        const turn = (s.turn || .9) * dt;
+        s.vx = s.vx * (1 - turn) + dx / len * speed * turn;
+        s.vy = s.vy * (1 - turn) + dy / len * speed * turn;
+      }
+      s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+    }
+    function moveBossSpike(s, dt) {
+      if (s.warn > 0) { s.warn -= dt; return; }
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.life -= dt;
+    }
+    function updateBossRushSpecial(o, dt, level, attackWindow) {
+      if (o.bossTimer >= attackWindow) return;
+      const b = bossCenter(o);
+      o.specialAt = (o.specialAt || 0) + dt;
+      if (o.rushType === 'spikes' && o.specialAt > Math.max(.56, .92 - level * .025)) {
+        o.specialAt = 0;
+        const count = 2 + Math.min(3, Math.floor(level / 2));
+        for (let i = 0; i < count; i++) {
+          const y = clamp(42 + ((i + Math.random() * .55) / count) * (state.h - 84), 38, state.h - 38);
+          o.bossSpikes.push({ x: b.cx - b.size * .52, y, vx: -(560 + level * 24), vy: Math.sin(o.phase + i) * 90, warn: .46, life: 1.55, r: 18 + Math.min(10, level) });
+        }
+      }
+      if (o.rushType === 'lasers' && o.specialAt > Math.max(.62, 1.0 - level * .02) && !o.bossBeam) {
+        o.specialAt = 0;
+        o.bossBeam = { y: clamp(36 + Math.random() * (state.h - 72), 42, state.h - 42), warn: Math.max(.18, .34 - level * .01), life: 0 };
+      }
+      if (o.rushType === 'missiles' && o.specialAt > Math.max(.48, .88 - level * .022)) {
+        o.specialAt = 0;
+        const count = 2 + Math.min(4, Math.floor(level / 2));
+        for (let i = 0; i < count; i++) {
+          const y = b.cy + (i - (count - 1) / 2) * 26;
+          o.shots.push({ x: b.cx - b.size * .48, y, vx: -260 - level * 12, vy: (Math.random() - .5) * 130, life: 3.2, kind: 'missile', turn: .9 + level * .04 });
+        }
+      }
+    }
     function flash(ms) { state.flashUntil = Math.max(state.flashUntil, performance.now() + ms); }
     function done(o) {
       if (o.type === 'boss' && o.fired) {
@@ -466,7 +524,8 @@
         const b = bossCenter(o);
         if (diamond(px, py, r, b.cx, b.cy, b.size * .48, b.size * .38)) return true;
         if (o.bossBeam && o.bossBeam.life > 0 && Math.abs(py - o.bossBeam.y) < r + 12) return true;
-        if (o.shots.some(s => s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + 7)) return true;
+        if (o.shots.some(s => s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + (s.kind === 'missile' ? 12 : 7))) return true;
+        if (o.bossSpikes?.some(s => s.warn <= 0 && s.life > 0 && Math.hypot(px - s.x, py - s.y) < r + s.r)) return true;
       }
       if (o.type === 'sniper' && o.laser && o.laser.life > 0 && Math.abs(py - o.laser.y) < r + 7) return true;
       if ((o.type === 'shooter' || o.type === 'burst') && projectileHit(o, px, py, r)) return true;
@@ -694,13 +753,94 @@
         ctx.setLineDash([]);
         if (!warning) { ctx.strokeStyle = 'rgba(255,255,255,.72)'; ctx.lineWidth = 5; line(0, o.bossBeam.y, state.w, o.bossBeam.y); }
       }
-      drawDiamond(b.cx, b.cy, b.size*.48, b.size*.38, o.hue+270);
+      drawBossBody(o, b);
       ctx.strokeStyle = 'rgba(255,80,220,.35)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(b.cx, b.cy, b.size*.58 + Math.sin(performance.now()*.007 + o.phase)*6, 0, Math.PI*2); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.cx, b.cy, b.size*.13 + Math.sin(performance.now()*.012)*3, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#120018'; ctx.beginPath(); ctx.arc(b.cx + Math.sin(performance.now()*.006)*b.size*.035, b.cy, b.size*.055, 0, Math.PI*2); ctx.fill();
-      for (const s of o.shots) if (s.life > 0) drawProjectile(s, '#ff66dd');
+      if (o.bossSpikes) for (const s of o.bossSpikes) drawBossSpike(s, o);
+      for (const s of o.shots) if (s.life > 0) drawProjectile(s, s.kind === 'missile' ? '#ffcf66' : '#ff66dd');
       if (o.rush) drawBossRushPlate(o, b);
+      ctx.restore();
+    }
+
+    function drawBossBody(o, b) {
+      const type = o.rushType || 'prism';
+      ctx.save();
+      ctx.translate(b.cx, b.cy);
+      ctx.rotate(Math.sin(performance.now() * .002 + o.phase) * .08);
+      ctx.fillStyle = `hsl(${o.hue + (type === 'spikes' ? 10 : 270)}, 95%, ${type === 'lasers' ? 36 : 44}%)`;
+      ctx.strokeStyle = 'rgba(255,255,255,.70)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      if (type === 'spikes') {
+        for (let i = 0; i < 12; i++) {
+          const a = i / 12 * Math.PI * 2;
+          const rr = i % 2 ? b.size * .36 : b.size * .58;
+          const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+      } else if (type === 'lasers') {
+        ctx.moveTo(0, -b.size * .42);
+        ctx.lineTo(b.size * .58, -b.size * .16);
+        ctx.lineTo(b.size * .40, b.size * .38);
+        ctx.lineTo(-b.size * .40, b.size * .38);
+        ctx.lineTo(-b.size * .58, -b.size * .16);
+      } else if (type === 'missiles') {
+        ctx.moveTo(b.size * .55, 0);
+        ctx.lineTo(b.size * .16, b.size * .32);
+        ctx.lineTo(-b.size * .46, b.size * .24);
+        ctx.lineTo(-b.size * .28, 0);
+        ctx.lineTo(-b.size * .46, -b.size * .24);
+        ctx.lineTo(b.size * .16, -b.size * .32);
+      } else {
+        ctx.moveTo(0, -b.size * .38);
+        ctx.lineTo(b.size * .48, 0);
+        ctx.lineTo(0, b.size * .38);
+        ctx.lineTo(-b.size * .48, 0);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      if (type === 'lasers') {
+        ctx.strokeStyle = 'rgba(255,255,255,.45)';
+        ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) line(-b.size * .38, i * b.size * .14, b.size * .38, i * b.size * .14);
+      }
+      if (type === 'missiles') {
+        ctx.fillStyle = 'rgba(255,210,80,.7)';
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.arc(-b.size * .24, i * b.size * .16, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawBossSpike(s, o) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      if (s.warn > 0) {
+        ctx.strokeStyle = `hsla(${o.hue + 20},100%,70%,${.25 + s.warn * .6})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([18, 14]);
+        line(0, s.y, state.w, s.y);
+        ctx.setLineDash([]);
+      } else {
+        ctx.translate(s.x, s.y);
+        ctx.rotate(Math.atan2(s.vy, s.vx));
+        ctx.fillStyle = `hsl(${o.hue + 34},100%,58%)`;
+        ctx.strokeStyle = 'rgba(255,255,255,.75)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-s.r, -s.r * .7);
+        ctx.lineTo(s.r * 1.45, 0);
+        ctx.lineTo(-s.r, s.r * .7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -797,9 +937,28 @@
       ctx.fillStyle = color;
       ctx.shadowColor = color;
       ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
-      ctx.fill();
+      if (s.kind === 'missile') {
+        ctx.translate(s.x, s.y);
+        ctx.rotate(Math.atan2(s.vy, s.vx));
+        ctx.beginPath();
+        ctx.moveTo(13, 0);
+        ctx.lineTo(-9, -7);
+        ctx.lineTo(-5, 0);
+        ctx.lineTo(-9, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,90,20,.78)';
+        ctx.beginPath();
+        ctx.moveTo(-10, -5);
+        ctx.lineTo(-22, 0);
+        ctx.lineTo(-10, 5);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
     function drawSpinner(o) {
