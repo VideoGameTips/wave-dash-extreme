@@ -127,6 +127,7 @@
       <p>Hold mouse, touch, or Space to climb. Release to dive. X shoots. C deflects. Survive the spikes, lasers, traps, blackouts, and giant right-side bosses.</p>
       <div class="trails" id="trails"></div>
       <button class="start" id="start">START RUN</button>
+      <button class="start" id="survivalStart">1V1 SURVIVAL</button>
       <button class="start" id="duoStart">2V2 BOSS</button>
       <div class="hint">Press / three times in one second to force Extreme Demon.</div>
     </div>
@@ -149,6 +150,7 @@
     const menu = document.getElementById('menu');
     const bossMenu = document.getElementById('bossMenu');
     const startBtn = document.getElementById('start');
+    const survivalStartBtn = document.getElementById('survivalStart');
     const duoStartBtn = document.getElementById('duoStart');
     const bossCloseBtn = document.getElementById('bossClose');
     const trailsEl = document.getElementById('trails');
@@ -201,6 +203,7 @@
       last: 0, crashed: false, realmName: '', bossRush: false, bossIndex: 0, bossClears: 0,
       deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
       duoMode: false, allyY: 240, allyVy: 0, allyShotReadyAt: 0,
+      survivalMode: false, rivalY: 240, rivalVy: 0, rivalAlive: true, rivalPx: 160, survivalResult: '',
     };
 
     function resize() {
@@ -245,6 +248,7 @@
         darknessUntil: 0, bossNextAt: 4200, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
+        survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
       });
       for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
@@ -264,6 +268,7 @@
         flashUntil: performance.now() + 260, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
+        survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
       });
       spawnBossRushBoss();
       menu.style.display = 'none';
@@ -280,8 +285,26 @@
         flashUntil: performance.now() + 320, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
         duoMode: true, allyY: state.h * .42, allyVy: 0, allyShotReadyAt: 0,
+        survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
       });
       spawnDuoBosses();
+      menu.style.display = 'none';
+      bossMenu.style.display = 'none';
+      if (!wasActive) requestAnimationFrame(frame);
+    }
+
+    function startSurvivalDuel() {
+      resize();
+      const wasActive = state.active;
+      Object.assign(state, {
+        y: state.h * .54, vy: 0, active: true, crashed: false, dist: 0, nextX: state.w + 120,
+        gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: performance.now() + 220,
+        darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
+        deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
+        survivalMode: true, rivalY: state.h * .46, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 54, survivalResult: '',
+      });
+      for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
       bossMenu.style.display = 'none';
       if (!wasActive) requestAnimationFrame(frame);
@@ -437,18 +460,23 @@
         else o.x -= d.speed * dt;
       }
       hazards(dt);
+      updateSurvivalRival(dt);
+      if (state.crashed) return;
       updateAlly(dt);
       updatePlayerShots(dt);
       while (state.obstacles.length && done(state.obstacles[0])) state.obstacles.shift();
       ensureBossRushBoss();
       if (!state.bossRush) while (state.nextX < state.w + 260) spawnObstacle();
-      if (state.y < 18 || state.y > state.h - 18) crash();
-      for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash();
+      if (state.y < 18 || state.y > state.h - 18) crash('player');
+      for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash('player');
+      if (state.crashed) return;
       scoreEl.textContent = Math.floor(state.dist / 10);
       const realm = d.realm;
       const bosses = state.bossRush ? state.obstacles.filter(o => o.rush) : [];
       const boss = bosses[0] || null;
-      modeEl.textContent = state.duoMode
+      modeEl.textContent = state.survivalMode
+        ? `1V1 SURVIVAL\n${state.rivalAlive ? 'AI STILL ALIVE' : 'AI CRASHED'}`
+        : state.duoMode
         ? `2V2 BOSS\n${bosses.length} TARGETS`
         : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag}\n${realm.name}`;
       modeEl.style.whiteSpace = 'pre-line';
@@ -578,6 +606,34 @@
           life: 1.0,
           ally: true,
         });
+      }
+    }
+
+    function updateSurvivalRival(dt) {
+      if (!state.survivalMode || !state.rivalAlive || !state.active) return;
+      const px = state.rivalPx;
+      const next = state.obstacles
+        .filter(o => o.x + o.w > px - 20)
+        .sort((a, b) => a.x - b.x)[0];
+      const d = difficulty();
+      const t = performance.now() * .001;
+      const wobble = Math.sin(t * 2.1 + state.spawnIndex * .7) * (8 + d.demon * 16);
+      const target = next ? clamp(next.gapY + wobble, 32, state.h - 32) : state.h * .5;
+      const margin = 10 + d.demon * 4;
+      const wantsUp = state.rivalY > target + margin;
+      state.rivalVy = wantsUp ? -410 : 410;
+      state.rivalY += state.rivalVy * dt;
+      const panic = next && next.x < px + 85 && Math.abs(state.rivalY - next.gapY) > next.gapH * .38;
+      if (panic) state.rivalY += (next.gapY - state.rivalY) * Math.min(1, dt * 3.2);
+      if (state.rivalY < 18 || state.rivalY > state.h - 18) {
+        endSurvivalDuel('win');
+        return;
+      }
+      for (const o of state.obstacles) {
+        if (hit(o, px, state.rivalY, 7)) {
+          endSurvivalDuel('win');
+          return;
+        }
       }
     }
 
@@ -811,6 +867,7 @@
       drawTrail();
       drawPlayerShots();
       drawAlly();
+      drawRival();
       drawShip(false);
       drawDeflectFx();
       drawRealmBanner(realm);
@@ -939,6 +996,34 @@
       ctx.lineTo(-8, 6);
       ctx.closePath();
       ctx.stroke();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawRival() {
+      if (!state.survivalMode || !state.active) return;
+      ctx.save();
+      ctx.globalCompositeOperation = state.rivalAlive ? 'source-over' : 'lighter';
+      ctx.translate(state.rivalPx, state.rivalY);
+      ctx.rotate(state.rivalVy < 0 ? -.72 : .72);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#1b0308';
+      ctx.lineWidth = 4;
+      ctx.fillStyle = state.rivalAlive ? '#ff5a77' : 'rgba(255,90,119,.32)';
+      ctx.shadowColor = '#ff335f';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-11, -11);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-11, 11);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+      ctx.fillStyle = '#ffd0da';
+      ctx.beginPath();
+      ctx.arc(2, 0, 3.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1796,8 +1881,28 @@
     function poly(points, fill){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();if(fill)ctx.fill();ctx.stroke();}
     function drawDiamond(cx,cy,rx,ry,hue){ctx.fillStyle=`hsl(${hue},95%,50%)`;ctx.strokeStyle='rgba(255,255,255,.64)';ctx.beginPath();ctx.moveTo(cx,cy-ry);ctx.lineTo(cx+rx,cy);ctx.lineTo(cx,cy+ry);ctx.lineTo(cx-rx,cy);ctx.closePath();ctx.fill();ctx.stroke();}
 
-    function crash() {
+    function endSurvivalDuel(result) {
       if (state.crashed) return;
+      state.rivalAlive = result !== 'win';
+      state.survivalResult = result;
+      const title = result === 'win' ? 'YOU WIN' : 'AI WINS';
+      const sub = result === 'win' ? 'Rival crashed first' : 'You crashed first';
+      showResult(title, sub);
+      crash(result === 'win' ? 'rival' : 'player');
+    }
+
+    function showResult(title, sub) {
+      modeEl.textContent = `${title}\n${sub}`;
+      modeEl.style.whiteSpace = 'pre-line';
+      flash(360);
+    }
+
+    function crash(who = 'player') {
+      if (state.crashed) return;
+      if (state.survivalMode && who === 'player') {
+        state.survivalResult = 'lose';
+        showResult('AI WINS', 'You crashed first');
+      }
       state.crashed = true; state.active = false; flash(260);
       const score = Math.floor(state.dist / 10);
       if (score > state.best) { state.best = score; localStorage.wave_dash_extreme_best = String(score); }
@@ -1831,6 +1936,10 @@
         e.preventDefault();
         startDuoMode(0);
       }
+      if (e.key === '1') {
+        e.preventDefault();
+        startSurvivalDuel();
+      }
       if (e.key === '/') {
         const now = performance.now();
         state.slashTimes = state.slashTimes.filter(t => now - t < 1000);
@@ -1840,6 +1949,7 @@
     });
     addEventListener('keyup', e => { if (e.code === 'Space' || e.key === 'ArrowUp') setHolding(false); });
     startBtn.addEventListener('click', reset);
+    survivalStartBtn.addEventListener('click', startSurvivalDuel);
     duoStartBtn.addEventListener('click', () => startDuoMode(0));
     bossCloseBtn.addEventListener('click', () => toggleBossMenu(false));
     bossRushTypes.forEach((boss, index) => {
