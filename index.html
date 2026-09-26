@@ -362,11 +362,12 @@
       state.nextX -= d.speed * dt;
       addTrail(dt);
       for (const o of state.obstacles) {
-        if (o.type === 'boss' && (o.fired || o.rush)) o.x = Math.max(o.x - d.speed * dt * (o.rush ? .28 : .18), state.w - Math.max(160, o.size * (o.rush ? 1.38 : 1.24)));
+        if (o.type === 'boss' && (o.fired || o.rush) && !o.retreating) o.x = Math.max(o.x - d.speed * dt * (o.rush ? .28 : .18), state.w - Math.max(160, o.size * (o.rush ? 1.38 : 1.24)));
         else o.x -= d.speed * dt;
       }
       hazards(dt);
       while (state.obstacles.length && done(state.obstacles[0])) state.obstacles.shift();
+      ensureBossRushBoss();
       if (!state.bossRush) while (state.nextX < state.w + 260) spawnObstacle();
       if (state.y < 18 || state.y > state.h - 18) crash();
       for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash();
@@ -460,6 +461,9 @@
           if (o.bossBeam.life <= 0) o.bossBeam = null;
         }
       }
+      if (!o.rush && o.fired && o.bossTimer >= attackWindow && !o.bossBeam && !o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80)) {
+        o.retreating = true;
+      }
       if (o.rush && o.fired && o.bossTimer >= attackWindow && !o.bossBeam && !o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80) && !o.bossSpikes?.some(s => s.life > 0 || s.warn > 0) && !o.bossZones?.some(z => z.warn > 0 || z.life > 0)) {
         o.bossTimer = 0;
         o.armedAt = 0;
@@ -470,6 +474,12 @@
         o.phase += 1.37;
         flash(120);
       }
+    }
+
+    function ensureBossRushBoss() {
+      if (!state.bossRush) return;
+      if (state.obstacles.some(o => o.rush)) return;
+      spawnBossRushBoss();
     }
 
     function moveShot(s, dt) {
@@ -587,10 +597,8 @@
     function done(o) {
       if (o.type === 'boss' && o.rush) return false;
       if (o.type === 'boss' && o.fired) {
-        if (o.bossTimer < 6.2) return false;
-        if (o.bossBeam && (o.bossBeam.warn > 0 || o.bossBeam.life > 0)) return false;
-        if (o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80)) return false;
-        return true;
+        if (!o.retreating) return false;
+        return o.x + o.w < -70;
       }
       if (o.x + o.w >= -70) return false;
       if (o.shot && o.shot.life > 0 && o.shot.x > -40) return false;
@@ -697,6 +705,9 @@
 
     function damageBoss(o, amount = 1) {
       if (!o?.rush || o.hp <= 0) return;
+      const now = performance.now();
+      if (now - (o.lastDamageAt || 0) < 240) return;
+      o.lastDamageAt = now;
       o.hp -= amount;
       o.bossTimer = 0;
       o.armedAt = 0;
