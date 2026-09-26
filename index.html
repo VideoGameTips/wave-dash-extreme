@@ -461,7 +461,6 @@
         }
       }
       if (o.rush && o.fired && o.bossTimer >= attackWindow && !o.bossBeam && !o.shots.some(s => s.life > 0 && s.x > -40 && s.x < state.w + 80) && !o.bossSpikes?.some(s => s.life > 0 || s.warn > 0) && !o.bossZones?.some(z => z.warn > 0 || z.life > 0)) {
-        o.hp -= o.rushType === 'pacific' ? 5 : 1;
         o.bossTimer = 0;
         o.armedAt = 0;
         o.shots = [];
@@ -469,8 +468,7 @@
         o.bossZones = [];
         o.bossPattern = (o.bossPattern + 1) % 3;
         o.phase += 1.37;
-        flash(o.hp <= 0 ? 360 : 180);
-        if (o.hp <= 0) advanceBossRush();
+        flash(120);
       }
     }
 
@@ -587,6 +585,7 @@
     }
     function flash(ms) { state.flashUntil = Math.max(state.flashUntil, performance.now() + ms); }
     function done(o) {
+      if (o.type === 'boss' && o.rush) return false;
       if (o.type === 'boss' && o.fired) {
         if (o.bossTimer < 6.2) return false;
         if (o.bossBeam && (o.bossBeam.warn > 0 || o.bossBeam.life > 0)) return false;
