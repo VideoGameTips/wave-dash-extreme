@@ -476,13 +476,7 @@
 
     function moveShot(s, dt) {
       if (s.kind === 'missile') {
-        const dx = state.px - s.x;
-        const dy = state.y - s.y;
-        const len = Math.max(1, Math.hypot(dx, dy));
-        const speed = Math.max(260, Math.hypot(s.vx, s.vy));
-        const turn = (s.turn || .9) * dt;
-        s.vx = s.vx * (1 - turn) + dx / len * speed * turn;
-        s.vy = s.vy * (1 - turn) + dy / len * speed * turn;
+        s.vy += (s.curve || 0) * dt;
       }
       s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
     }
@@ -498,6 +492,7 @@
         if (z.warn <= 0) z.life = z.duration || .62;
         return;
       }
+      if (z.drift) z.x = (z.x ?? state.w) + z.drift * dt;
       z.life -= dt;
     }
     function updateBossRushSpecial(o, dt, level, attackWindow) {
@@ -510,6 +505,13 @@
         for (let i = 0; i < count; i++) {
           const y = clamp(42 + ((i + Math.random() * .55) / count) * (state.h - 84), 38, state.h - 38);
           o.bossSpikes.push({ x: b.cx - b.size * .52, y, vx: -(560 + level * 24), vy: Math.sin(o.phase + i) * 90, warn: .46, life: 1.55, r: 18 + Math.min(10, level) });
+        }
+        if (Math.floor(o.bossTimer * 2) % 3 === 0) {
+          const fan = 5;
+          for (let i = 0; i < fan; i++) {
+            const t = i / (fan - 1) - .5;
+            o.bossSpikes.push({ x: b.cx - b.size * .52, y: b.cy + t * b.size * .75, vx: -(430 + level * 18), vy: t * (310 + level * 10), warn: .88, life: 2.0, r: 24 + Math.min(12, level), giant: true });
+          }
         }
       }
       if (o.rushType === 'blades' && o.specialAt > Math.max(.50, .82 - level * .022)) {
@@ -529,7 +531,7 @@
         const count = 2 + Math.min(4, Math.floor(level / 2));
         for (let i = 0; i < count; i++) {
           const y = b.cy + (i - (count - 1) / 2) * 26;
-          o.shots.push({ x: b.cx - b.size * .48, y, vx: -260 - level * 12, vy: (Math.random() - .5) * 130, life: 3.2, kind: 'missile', turn: .9 + level * .04 });
+          o.shots.push({ x: b.cx - b.size * .48, y, vx: -270 - level * 10, vy: (Math.random() - .5) * 120, life: 3.2, kind: 'missile', curve: (Math.random() < .5 ? -1 : 1) * (120 + level * 8) });
         }
       }
       if (o.rushType === 'core' && o.specialAt > Math.max(.54, .9 - level * .02)) {
@@ -538,10 +540,17 @@
           o.bossBeam = { y: clamp(36 + Math.random() * (state.h - 72), 42, state.h - 42), warn: Math.max(.18, .30 - level * .008), life: 0 };
         } else {
           for (let i = 0; i < 3; i++) {
-            o.shots.push({ x: b.cx - b.size * .48, y: b.cy + (i - 1) * 32, vx: -290 - level * 12, vy: (i - 1) * 80, life: 3.1, kind: 'missile', turn: .75 + level * .035 });
+            o.shots.push({ x: b.cx - b.size * .48, y: b.cy + (i - 1) * 32, vx: -300 - level * 10, vy: (i - 1) * 80, life: 3.1, kind: 'missile', curve: (i - 1) * 70 });
           }
         }
       }
+      if ((o.rushType === 'core' || o.rushType === 'alien') && Math.floor(o.bossTimer) % 4 === 2 && !o.wallQueued) {
+        o.wallQueued = true;
+        const h = Math.max(68, state.h * .18);
+        const y = clamp(state.y + (Math.random() < .5 ? -1 : 1) * state.h * .22, h * .5, state.h - h * .5);
+        o.bossZones.push({ x: state.w, y, h, warn: 1.25, life: 0, duration: 1.55, hue: o.hue + 80, drift: -120 - level * 6, w: state.w * .62 });
+      }
+      if ((o.rushType === 'core' || o.rushType === 'alien') && Math.floor(o.bossTimer) % 4 !== 2) o.wallQueued = false;
       if (o.rushType === 'ak' && o.specialAt > .16) {
         o.specialAt = 0;
         const spread = (Math.random() - .5) * .20;
@@ -560,7 +569,7 @@
         const count = 3 + Math.min(5, Math.floor(level / 3));
         for (let i = 0; i < count; i++) {
           const y = 40 + (i + .5) / count * (state.h - 80);
-          o.shots.push({ x: b.cx - b.size * .48, y, vx: -230 - level * 10, vy: (Math.random() - .5) * 180, life: 3.35, kind: 'missile', turn: 1.05 + level * .04 });
+          o.shots.push({ x: b.cx - b.size * .48, y, vx: -245 - level * 8, vy: (i - (count - 1) / 2) * 42, life: 3.35, kind: 'missile', curve: (i % 2 ? -1 : 1) * (150 + level * 7) });
         }
       }
       if (o.rushType === 'pacific' && o.specialAt > 2.15) {
@@ -639,7 +648,9 @@
         }
         if (o.bossZones) for (const z of o.bossZones) {
           if (z.warn > 0 || z.life <= 0) continue;
-          if (py + r > z.y - z.h * .5 && py - r < z.y + z.h * .5) return true;
+          const zx = z.x ?? 0;
+          const zw = z.w ?? state.w;
+          if (px + r > zx && px - r < zx + zw && py + r > z.y - z.h * .5 && py - r < z.y + z.h * .5) return true;
         }
       }
       if (o.type === 'sniper' && o.laser && o.laser.life > 0 && Math.abs(py - o.laser.y) < r + 7) return true;
@@ -1066,9 +1077,10 @@
         ctx.strokeStyle = 'rgba(255,255,255,.75)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(-s.r, -s.r * .7);
-        ctx.lineTo(s.r * 1.45, 0);
-        ctx.lineTo(-s.r, s.r * .7);
+        const scale = s.giant ? 1.55 : 1;
+        ctx.moveTo(-s.r * scale, -s.r * .7 * scale);
+        ctx.lineTo(s.r * 1.45 * scale, 0);
+        ctx.lineTo(-s.r * scale, s.r * .7 * scale);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -1082,16 +1094,18 @@
       const warning = z.warn > 0;
       const alpha = warning ? .18 + Math.sin(performance.now() * .012) * .06 : .56;
       ctx.fillStyle = `hsla(${z.hue || o.hue},100%,${warning ? 58 : 48}%,${alpha})`;
-      ctx.fillRect(0, z.y - z.h * .5, state.w, z.h);
+      const x = z.x ?? 0;
+      const w = z.w ?? state.w;
+      ctx.fillRect(x, z.y - z.h * .5, w, z.h);
       ctx.strokeStyle = warning ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.80)';
       ctx.lineWidth = warning ? 2 : 5;
       ctx.setLineDash(warning ? [22, 18] : []);
-      line(0, z.y - z.h * .5, state.w, z.y - z.h * .5);
-      line(0, z.y + z.h * .5, state.w, z.y + z.h * .5);
+      line(x, z.y - z.h * .5, x + w, z.y - z.h * .5);
+      line(x, z.y + z.h * .5, x + w, z.y + z.h * .5);
       ctx.setLineDash([]);
       ctx.fillStyle = warning ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.90)';
       ctx.font = '900 11px ui-monospace, SFMono-Regular, Menlo, monospace';
-      ctx.fillText(warning ? 'FORBIDDEN RANGE WARNING' : 'FORBIDDEN RANGE ACTIVE', 24, z.y - z.h * .5 + 20);
+      ctx.fillText(warning ? 'FORBIDDEN RANGE WARNING' : 'FORBIDDEN RANGE ACTIVE', Math.max(24, x + 16), z.y - z.h * .5 + 20);
       ctx.restore();
     }
 
