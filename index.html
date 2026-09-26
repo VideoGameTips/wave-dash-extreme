@@ -127,6 +127,7 @@
       <p>Hold mouse, touch, or Space to climb. Release to dive. X shoots. C deflects. Survive the spikes, lasers, traps, blackouts, and giant right-side bosses.</p>
       <div class="trails" id="trails"></div>
       <button class="start" id="start">START RUN</button>
+      <button class="start" id="duoStart">2V2 BOSS</button>
       <div class="hint">Press / three times in one second to force Extreme Demon.</div>
     </div>
   </div>
@@ -148,6 +149,7 @@
     const menu = document.getElementById('menu');
     const bossMenu = document.getElementById('bossMenu');
     const startBtn = document.getElementById('start');
+    const duoStartBtn = document.getElementById('duoStart');
     const bossCloseBtn = document.getElementById('bossClose');
     const trailsEl = document.getElementById('trails');
     const bossChoicesEl = document.getElementById('bossChoices');
@@ -198,6 +200,7 @@
       extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
       last: 0, crashed: false, realmName: '', bossRush: false, bossIndex: 0, bossClears: 0,
       deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+      duoMode: false, allyY: 240, allyVy: 0, allyShotReadyAt: 0,
     };
 
     function resize() {
@@ -241,6 +244,7 @@
         gapY: state.h * 0.52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: 0,
         darknessUntil: 0, bossNextAt: 4200, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
       });
       for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
@@ -259,8 +263,25 @@
         dist: 1400, nextX: state.w + 220, gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [],
         flashUntil: performance.now() + 260, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
       });
       spawnBossRushBoss();
+      menu.style.display = 'none';
+      bossMenu.style.display = 'none';
+      if (!wasActive) requestAnimationFrame(frame);
+    }
+
+    function startDuoMode(index = 0) {
+      resize();
+      const wasActive = state.active;
+      Object.assign(state, {
+        y: state.h * .58, vy: 0, active: true, crashed: false, bossRush: true, bossIndex: index, bossClears: 0,
+        dist: 2000, nextX: state.w + 220, gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [],
+        flashUntil: performance.now() + 320, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
+        deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        duoMode: true, allyY: state.h * .42, allyVy: 0, allyShotReadyAt: 0,
+      });
+      spawnDuoBosses();
       menu.style.display = 'none';
       bossMenu.style.display = 'none';
       if (!wasActive) requestAnimationFrame(frame);
@@ -308,11 +329,61 @@
       flash(260);
     }
 
+    function makeRushBoss(level, lane = 0, duo = false) {
+      const realm = currentRealm();
+      const spec = bossRushTypes[level % bossRushTypes.length];
+      const hp = spec.type === 'pacific' ? 50 : 3 + Math.floor(level / 2) + (duo ? 2 : 0);
+      const laneY = lane ? state.h * .66 : state.h * .34;
+      return {
+        x: state.w + 150 + lane * 34,
+        w: 116 + Math.min(48, level * 6),
+        gapY: duo ? laneY : state.h * (.42 + .16 * Math.sin(level * 1.7)),
+        gapH: Math.max(118, 210 - level * 6),
+        size: 150 + Math.min(80, level * 10),
+        type: 'boss',
+        spin: 0,
+        phase: Math.random() * Math.PI * 2,
+        hue: spec.hue + level * 10,
+        realmFire: realm.fire,
+        fired: true,
+        armedAt: lane * .22,
+        targetY: 0,
+        shot: null,
+        shots: [],
+        laser: null,
+        bossTimer: lane * .45,
+        bossPattern: level % 3,
+        bossBeam: null,
+        bossSpikes: [],
+        bossZones: [],
+        rush: true,
+        duo,
+        rushLevel: level,
+        rushType: spec.type,
+        rushName: spec.name,
+        hp,
+        maxHp: hp,
+      };
+    }
+
+    function spawnDuoBosses() {
+      state.obstacles = [
+        makeRushBoss(state.bossIndex, 0, true),
+        makeRushBoss(state.bossIndex + 1, 1, true),
+      ];
+      flash(320);
+    }
+
     function advanceBossRush() {
       state.bossClears++;
       state.bossIndex++;
       state.dist += 420;
-      spawnBossRushBoss();
+      if (state.duoMode) {
+        state.bossIndex++;
+        spawnDuoBosses();
+      } else {
+        spawnBossRushBoss();
+      }
     }
 
     function spawnObstacle() {
@@ -366,6 +437,7 @@
         else o.x -= d.speed * dt;
       }
       hazards(dt);
+      updateAlly(dt);
       updatePlayerShots(dt);
       while (state.obstacles.length && done(state.obstacles[0])) state.obstacles.shift();
       ensureBossRushBoss();
@@ -374,8 +446,11 @@
       for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash();
       scoreEl.textContent = Math.floor(state.dist / 10);
       const realm = d.realm;
-      const boss = state.bossRush ? state.obstacles.find(o => o.rush) : null;
-      modeEl.textContent = boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag}\n${realm.name}`;
+      const bosses = state.bossRush ? state.obstacles.filter(o => o.rush) : [];
+      const boss = bosses[0] || null;
+      modeEl.textContent = state.duoMode
+        ? `2V2 BOSS\n${bosses.length} TARGETS`
+        : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag}\n${realm.name}`;
       modeEl.style.whiteSpace = 'pre-line';
       modeEl.style.color = realm.accent;
       if (realm.name !== state.realmName) {
@@ -480,7 +555,30 @@
     function ensureBossRushBoss() {
       if (!state.bossRush) return;
       if (state.obstacles.some(o => o.rush)) return;
-      spawnBossRushBoss();
+      if (state.duoMode) spawnDuoBosses();
+      else spawnBossRushBoss();
+    }
+
+    function updateAlly(dt) {
+      if (!state.duoMode || !state.active) return;
+      const bosses = state.obstacles.filter(o => o.rush && o.hp > 0);
+      const target = bosses[0];
+      const desired = target ? clamp(target.gapY + Math.sin(performance.now() * .003) * 42, 36, state.h - 36) : state.h * .42;
+      const dy = desired - state.allyY;
+      state.allyVy = clamp(dy * 7, -410, 410);
+      state.allyY = clamp(state.allyY + state.allyVy * dt, 24, state.h - 24);
+      const now = performance.now();
+      if (target && now >= state.allyShotReadyAt) {
+        state.allyShotReadyAt = now + 260;
+        state.playerShots.push({
+          x: state.px + 54,
+          y: state.allyY,
+          vx: 900,
+          vy: clamp((target.gapY - state.allyY) * 2.2, -170, 170),
+          life: 1.0,
+          ally: true,
+        });
+      }
     }
 
     function firePlayerShot() {
@@ -502,12 +600,13 @@
         s.x += s.vx * dt;
         s.y += s.vy * dt;
         s.life -= dt;
-        const boss = state.obstacles.find(o => o.rush && o.hp > 0);
-        if (!boss) continue;
-        const b = bossCenter(boss);
-        if (Math.hypot(s.x - b.cx, s.y - b.cy) < b.size * .52) {
-          s.life = 0;
-          damageBoss(boss, 1, false);
+        for (const boss of state.obstacles.filter(o => o.rush && o.hp > 0)) {
+          const b = bossCenter(boss);
+          if (Math.hypot(s.x - b.cx, s.y - b.cy) < b.size * .52) {
+            s.life = 0;
+            damageBoss(boss, 1, false);
+            break;
+          }
         }
       }
       state.playerShots = state.playerShots.filter(s => s.life > 0 && s.x < state.w + 90);
@@ -711,6 +810,7 @@
       drawDarkness();
       drawTrail();
       drawPlayerShots();
+      drawAlly();
       drawShip(false);
       drawDeflectFx();
       drawRealmBanner(realm);
@@ -751,7 +851,15 @@
         o.phase += 1.37;
       }
       flash(o.hp <= 0 ? 360 : 160);
-      if (o.hp <= 0) advanceBossRush();
+      if (o.hp <= 0) {
+        if (state.duoMode) {
+          state.obstacles = state.obstacles.filter(x => x !== o);
+          flash(260);
+          if (!state.obstacles.some(x => x.rush && x.hp > 0)) advanceBossRush();
+        } else {
+          advanceBossRush();
+        }
+      }
     }
 
     function tryDeflectBossThreat(o, threat, px, py, radius) {
@@ -790,16 +898,48 @@
       ctx.globalCompositeOperation = 'lighter';
       for (const s of state.playerShots) {
         const a = Math.max(0, Math.min(1, s.life / .9));
-        ctx.strokeStyle = `rgba(255,242,160,${.45 + a * .35})`;
+        ctx.strokeStyle = s.ally ? `rgba(136,255,170,${.45 + a * .35})` : `rgba(255,242,160,${.45 + a * .35})`;
         ctx.lineWidth = 4;
         line(s.x - 34, s.y - s.vy * .03, s.x, s.y);
-        ctx.fillStyle = '#fff7b8';
-        ctx.shadowColor = '#fff2a0';
+        ctx.fillStyle = s.ally ? '#aaffc4' : '#fff7b8';
+        ctx.shadowColor = s.ally ? '#66ffaa' : '#fff2a0';
         ctx.shadowBlur = 16;
         ctx.beginPath();
         ctx.arc(s.x, s.y, 4.5, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
+    }
+
+    function drawAlly() {
+      if (!state.duoMode || !state.active) return;
+      const theme = trailThemes.toxic;
+      ctx.save();
+      ctx.translate(state.px + 28, state.allyY);
+      ctx.rotate(state.allyVy < 0 ? -.58 : .58);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#03140a';
+      ctx.lineWidth = 4;
+      ctx.fillStyle = '#aaffc4';
+      ctx.shadowColor = `hsl(${theme.hues[1]},100%,62%)`;
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.moveTo(16, 0);
+      ctx.lineTo(-10, -10);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(-10, 10);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+      ctx.fillStyle = '#44ff88';
+      ctx.beginPath();
+      ctx.moveTo(-8, -6);
+      ctx.lineTo(-21, 0);
+      ctx.lineTo(-8, 6);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
       ctx.restore();
     }
 
@@ -1175,7 +1315,7 @@
 
     function drawBossRushPlate(o, b) {
       const x = state.w - 260;
-      const y = 92;
+      const y = o.duo ? (o.gapY < state.h * .5 ? 92 : 170) : 92;
       const hpW = 220;
       const hp = Math.max(0, o.hp || 0);
       const maxHp = Math.max(1, o.maxHp || hp || 1);
@@ -1687,6 +1827,10 @@
         e.preventDefault();
         startBossRush();
       }
+      if (e.key === '2') {
+        e.preventDefault();
+        startDuoMode(0);
+      }
       if (e.key === '/') {
         const now = performance.now();
         state.slashTimes = state.slashTimes.filter(t => now - t < 1000);
@@ -1696,6 +1840,7 @@
     });
     addEventListener('keyup', e => { if (e.code === 'Space' || e.key === 'ArrowUp') setHolding(false); });
     startBtn.addEventListener('click', reset);
+    duoStartBtn.addEventListener('click', () => startDuoMode(0));
     bossCloseBtn.addEventListener('click', () => toggleBossMenu(false));
     bossRushTypes.forEach((boss, index) => {
       const btn = document.createElement('button');
