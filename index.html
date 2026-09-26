@@ -601,7 +601,7 @@
     function activateDeflect() {
       const now = performance.now();
       if (now < state.deflectReadyAt) return;
-      state.deflectUntil = now + 200;
+      state.deflectUntil = now + 1000;
       state.deflectReadyAt = now + 5000;
       flash(70);
     }
@@ -639,7 +639,7 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       if (active) {
-        const t = (state.deflectUntil - now) / 200;
+        const t = (state.deflectUntil - now) / 1000;
         ctx.strokeStyle = `rgba(102,247,255,${.35 + t * .55})`;
         ctx.lineWidth = 4 + t * 7;
         ctx.beginPath();
