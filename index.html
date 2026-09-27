@@ -136,6 +136,8 @@
       <div class="pipe-label">Trail</div>
       <div class="trails" id="trails"></div>
       <button class="start" id="start">START RUN</button>
+      <button class="start" id="checkpointStart">CONTINUE BOSS CHECKPOINT</button>
+      <div class="hint" id="checkpointInfo">Boss checkpoint: none yet</div>
       <button class="start" id="survivalStart">1V1 SURVIVAL</button>
       <button class="start" id="duoStart">2V2 BOSS</button>
       <div class="hint">Press / three times in one second to force Extreme Demon.</div>
@@ -159,6 +161,8 @@
     const menu = document.getElementById('menu');
     const bossMenu = document.getElementById('bossMenu');
     const startBtn = document.getElementById('start');
+    const checkpointStartBtn = document.getElementById('checkpointStart');
+    const checkpointInfoEl = document.getElementById('checkpointInfo');
     const survivalStartBtn = document.getElementById('survivalStart');
     const duoStartBtn = document.getElementById('duoStart');
     const bossCloseBtn = document.getElementById('bossClose');
@@ -215,6 +219,7 @@
     const state = {
       w: 0, h: 0, px: 112, y: 240, vy: 0, holding: false, active: false,
       dist: 0, nextX: 0, gapY: 240, spawnIndex: 0, best: Number(localStorage.wave_dash_extreme_best || 0),
+      bossCheckpoint: Number(localStorage.wave_dash_boss_checkpoint || 0),
       trail: [], obstacles: [], flashUntil: 0, darknessUntil: 0, bossNextAt: 4200,
       extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
       levelPipe: localStorage.wave_dash_pipe || 'classic',
@@ -283,6 +288,10 @@
       startSpecificBoss(0);
     }
 
+    function continueBossCheckpoint() {
+      startSpecificBoss(Math.max(0, state.bossCheckpoint || 0));
+    }
+
     function startSpecificBoss(index) {
       resize();
       const wasActive = state.active;
@@ -298,6 +307,25 @@
       menu.style.display = 'none';
       bossMenu.style.display = 'none';
       if (!wasActive) requestAnimationFrame(frame);
+    }
+
+    function saveBossCheckpoint(index) {
+      const clamped = Math.max(0, Math.floor(index || 0));
+      if (clamped <= (state.bossCheckpoint || 0)) return;
+      state.bossCheckpoint = clamped;
+      localStorage.wave_dash_boss_checkpoint = String(clamped);
+      updateCheckpointUi();
+    }
+
+    function updateCheckpointUi() {
+      const idx = Math.max(0, state.bossCheckpoint || 0);
+      const spec = bossRushTypes[idx % bossRushTypes.length];
+      checkpointInfoEl.textContent = idx > 0
+        ? `Boss checkpoint: boss ${idx + 1} - ${spec.name}`
+        : 'Boss checkpoint: none yet';
+      checkpointStartBtn.disabled = idx <= 0;
+      checkpointStartBtn.textContent = idx > 0 ? `CONTINUE FROM BOSS ${idx + 1}` : 'CONTINUE BOSS CHECKPOINT';
+      checkpointStartBtn.style.opacity = idx > 0 ? '1' : '.45';
     }
 
     function startDuoMode(index = 0) {
@@ -430,9 +458,11 @@
     function advanceBossRush() {
       state.bossClears++;
       state.bossIndex++;
+      saveBossCheckpoint(state.bossIndex);
       state.dist += 420;
       if (state.duoMode) {
         state.bossIndex++;
+        saveBossCheckpoint(state.bossIndex);
         spawnDuoBosses();
       } else {
         spawnBossRushBoss();
@@ -2101,6 +2131,7 @@
     });
     addEventListener('keyup', e => { if (e.code === 'Space' || e.key === 'ArrowUp') setHolding(false); });
     startBtn.addEventListener('click', reset);
+    checkpointStartBtn.addEventListener('click', continueBossCheckpoint);
     survivalStartBtn.addEventListener('click', startSurvivalDuel);
     duoStartBtn.addEventListener('click', () => startDuoMode(0));
     bossCloseBtn.addEventListener('click', () => toggleBossMenu(false));
@@ -2139,6 +2170,7 @@
     }
     resize();
     bestEl.textContent = `BEST ${state.best}`;
+    updateCheckpointUi();
     draw();
   })();
   </script>
