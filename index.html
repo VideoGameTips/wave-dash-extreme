@@ -225,7 +225,7 @@
         realm,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
         gap: Math.max(94, 205 - Math.min(86, state.dist * 0.0065) - demon * 22 - realm.gap),
-        spacing: Math.max(150, 330 - Math.min(96, state.dist * 0.0048) - demon * 28 - realm.gap * .45),
+        spacing: Math.max(118, 280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55),
         width: 88 + demon * 16,
         size: 116 + demon * 20,
       };
@@ -430,14 +430,59 @@
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
       const realm = d.realm;
       const type = bossDue ? 'boss' : pick(roll, realm.pool);
-      state.obstacles.push({
-        x: state.nextX, w: d.width, gapY: state.gapY, gapH: d.gap, size: d.size, type,
+      const pack = [makeObstacle(type, state.nextX, state.gapY, d.gap, d.width, d.size, realm)];
+      if (!bossDue) addTrapFormation(pack, d, realm);
+      state.obstacles.push(...pack);
+      state.nextX += d.spacing + Math.random() * 28;
+    }
+
+    function makeObstacle(type, x, gapY, gapH, w, size, realm, phaseShift = 0) {
+      return {
+        x, w, gapY, gapH, size, type,
         spin: Math.random() * Math.PI, phase: Math.random() * Math.PI * 2, hue: realm.hue + Math.sin(state.dist * .003) * 32,
         realmFire: realm.fire,
         fired: false, armedAt: 0, targetY: 0, shot: null, shots: [], laser: null, bossTimer: 0,
         bossPattern: Math.floor(Math.random() * 3), bossBeam: null,
-      });
-      state.nextX += d.spacing + Math.random() * 44;
+        phaseShift,
+      };
+    }
+
+    function addTrapFormation(pack, d, realm) {
+      const score = state.dist / 10;
+      const density = state.extreme ? 3 : score > 2400 ? 3 : score > 900 ? 2 : 1;
+      const cx = state.nextX;
+      const laneGap = d.gap * .64;
+      const sideSpace = Math.max(72, d.gap * .82);
+      const side = state.gapY < state.h * .5 ? 1 : -1;
+      const safeY = y => clamp(y, laneGap * .5 + 26, state.h - laneGap * .5 - 26);
+      const sideY = safeY(state.gapY + side * (sideSpace + 54));
+      const farY = safeY(state.gapY - side * (sideSpace + 88));
+      const formation = state.spawnIndex % 5;
+      const hazard = (type, xMul, y, wMul = .72, hMul = .62, sizeMul = .72) => {
+        pack.push(makeObstacle(type, cx + d.spacing * xMul, y, laneGap * hMul, Math.max(54, d.width * wMul), d.size * sizeMul, realm));
+      };
+
+      if (formation === 0) {
+        hazard('spinner', .30, sideY, .80, .72, .82);
+        if (density > 1) hazard('sweep', .62, farY, .82, .70, .78);
+        if (density > 2) hazard('mines', .92, sideY, .90, .78, .70);
+      } else if (formation === 1) {
+        hazard('slash_gate', .24, sideY, .86, .75, .78);
+        if (density > 1) hazard('sword', .58, farY, .70, .66, .74);
+        if (density > 2) hazard('shuriken', .84, safeY((sideY + farY) * .5), .74, .70, .78);
+      } else if (formation === 2) {
+        hazard('claw', .18, sideY, .92, .74, .76);
+        if (density > 1) hazard('saw', .52, farY, .90, .70, .74);
+        if (density > 2) hazard('drop_shuriken', .86, safeY(state.gapY + side * 32), .72, .66, .76);
+      } else if (formation === 3) {
+        hazard('sniper', .20, farY, .74, .62, .72);
+        if (density > 1) hazard('mines', .50, sideY, .88, .76, .70);
+        if (density > 2) hazard('sweep', .78, safeY(state.gapY - side * 44), .78, .64, .72);
+      } else {
+        hazard('sword', .16, sideY, .72, .66, .74);
+        if (density > 1) hazard('spinner', .44, farY, .82, .70, .80);
+        if (density > 2) hazard('slash_gate', .76, sideY, .86, .72, .78);
+      }
     }
 
     function pick(r, list) {
