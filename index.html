@@ -86,6 +86,12 @@
       gap: 8px;
       margin: 16px 0 18px;
     }
+    .pipe-label {
+      margin: 10px 0 -6px;
+      color: rgba(255,255,255,.58);
+      font: 900 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-transform: uppercase;
+    }
     button {
       border: 1px solid rgba(255,255,255,.18);
       background: rgba(255,255,255,.08);
@@ -125,6 +131,9 @@
     <div class="panel">
       <h1>Wave Dash Extreme</h1>
       <p>Hold mouse, touch, or Space to climb. Release to dive. X shoots. C deflects. Survive the spikes, lasers, traps, blackouts, and giant right-side bosses.</p>
+      <div class="pipe-label">Level Pipe</div>
+      <div class="trails" id="pipes"></div>
+      <div class="pipe-label">Trail</div>
       <div class="trails" id="trails"></div>
       <button class="start" id="start">START RUN</button>
       <button class="start" id="survivalStart">1V1 SURVIVAL</button>
@@ -153,6 +162,7 @@
     const survivalStartBtn = document.getElementById('survivalStart');
     const duoStartBtn = document.getElementById('duoStart');
     const bossCloseBtn = document.getElementById('bossClose');
+    const pipesEl = document.getElementById('pipes');
     const trailsEl = document.getElementById('trails');
     const bossChoicesEl = document.getElementById('bossChoices');
 
@@ -162,6 +172,13 @@
       toxic: { name: 'Toxic', hues: [94, 126, 152] },
       royal: { name: 'Royal', hues: [264, 286, 312] },
       void: { name: 'Void', hues: [326, 352, 18] },
+    };
+    const levelPipes = {
+      classic: { name: 'Classic', tag: 'CLASSIC', gapAdd: 0, spacingMult: 1, densityAdd: 0, driftMult: 1, spikeBias: 0, hue: 185 },
+      spike_hell: { name: 'Spike Hell', tag: 'SPIKE HELL', gapAdd: 10, spacingMult: .88, densityAdd: 1, driftMult: 1.08, spikeBias: .68, hue: 8, pool: ['top','bottom','dual','diamond','shuriken','drop_shuriken','spinner','sword'] },
+      needle_pipe: { name: 'Needle Pipe', tag: 'NEEDLE PIPE', gapAdd: 38, spacingMult: .92, densityAdd: 1, driftMult: 1.42, spikeBias: .44, hue: 52, pool: ['dual','top','bottom','slash_gate','spinner','sweep','shuriken','drop_shuriken'] },
+      laser_maze: { name: 'Laser Maze', tag: 'LASER MAZE', gapAdd: 22, spacingMult: .84, densityAdd: 1, driftMult: 1.18, spikeBias: .12, hue: 190, pool: ['spinner','sweep','slash_gate','sword','sniper','claw','saw','shuriken'] },
+      demon_storm: { name: 'Demon Storm', tag: 'DEMON STORM', gapAdd: 32, spacingMult: .76, densityAdd: 2, driftMult: 1.48, spikeBias: .34, hue: 326, pool: ['dual','diamond','spinner','sweep','sword','slash_gate','claw','saw','mines','shuriken','drop_shuriken','blackout','sniper'] },
     };
 
     const realms = [
@@ -200,6 +217,7 @@
       dist: 0, nextX: 0, gapY: 240, spawnIndex: 0, best: Number(localStorage.wave_dash_extreme_best || 0),
       trail: [], obstacles: [], flashUntil: 0, darknessUntil: 0, bossNextAt: 4200,
       extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
+      levelPipe: localStorage.wave_dash_pipe || 'classic',
       last: 0, crashed: false, realmName: '', bossRush: false, bossIndex: 0, bossClears: 0,
       deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
       duoMode: false, allyY: 240, allyVy: 0, allyShotReadyAt: 0,
@@ -220,15 +238,21 @@
       const score = state.dist / 10;
       const demon = state.extreme ? 1 : Math.max(0, Math.min(1, (score - 1800) / 2400));
       const realm = currentRealm();
+      const pipe = currentPipe();
       return {
         demon,
         realm,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
-        gap: Math.max(94, 205 - Math.min(86, state.dist * 0.0065) - demon * 22 - realm.gap),
-        spacing: Math.max(118, 280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55),
+        gap: Math.max(72, 205 - Math.min(86, state.dist * 0.0065) - demon * 22 - realm.gap - pipe.gapAdd),
+        spacing: Math.max(92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
         width: 88 + demon * 16,
         size: 116 + demon * 20,
+        pipe,
       };
+    }
+
+    function currentPipe() {
+      return levelPipes[state.levelPipe] || levelPipes.classic;
     }
 
     function currentRealm() {
@@ -423,13 +447,13 @@
       state.spawnIndex++;
       const slam = state.spawnIndex % 3 === 0;
       const sign = state.gapY < state.h * .5 ? 1 : -1;
-      const drift = slam ? sign * (0.62 + Math.random() * .34) * maxRise : (Math.random() * 2 - 1) * maxRise * .86;
+      const drift = (slam ? sign * (0.62 + Math.random() * .34) * maxRise : (Math.random() * 2 - 1) * maxRise * .86) * d.pipe.driftMult;
       state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
       const roll = Math.random();
       const bossDue = state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
       const realm = d.realm;
-      const type = bossDue ? 'boss' : pick(roll, realm.pool);
+      const type = bossDue ? 'boss' : pickObstacleType(roll, realm, d.pipe);
       const pack = [makeObstacle(type, state.nextX, state.gapY, d.gap, d.width, d.size, realm)];
       if (!bossDue) addTrapFormation(pack, d, realm);
       state.obstacles.push(...pack);
@@ -449,7 +473,7 @@
 
     function addTrapFormation(pack, d, realm) {
       const score = state.dist / 10;
-      const density = state.extreme ? 3 : score > 2400 ? 3 : score > 900 ? 2 : 1;
+      const density = Math.min(4, (state.extreme ? 3 : score > 2400 ? 3 : score > 900 ? 2 : 1) + d.pipe.densityAdd);
       const cx = state.nextX;
       const laneGap = d.gap * .64;
       const sideSpace = Math.max(72, d.gap * .82);
@@ -463,26 +487,38 @@
       };
 
       if (formation === 0) {
+        if (d.pipe.spikeBias > .4) hazard('dual', .12, farY, .90, .95, .76);
         hazard('spinner', .30, sideY, .80, .72, .82);
         if (density > 1) hazard('sweep', .62, farY, .82, .70, .78);
         if (density > 2) hazard('mines', .92, sideY, .90, .78, .70);
+        if (density > 3) hazard('diamond', 1.12, farY, .90, .80, .86);
       } else if (formation === 1) {
         hazard('slash_gate', .24, sideY, .86, .75, .78);
+        if (d.pipe.spikeBias > .3) hazard(Math.random() < .5 ? 'top' : 'bottom', .38, farY, .86, .98, .78);
         if (density > 1) hazard('sword', .58, farY, .70, .66, .74);
         if (density > 2) hazard('shuriken', .84, safeY((sideY + farY) * .5), .74, .70, .78);
+        if (density > 3) hazard('dual', 1.08, sideY, .86, .96, .80);
       } else if (formation === 2) {
         hazard('claw', .18, sideY, .92, .74, .76);
         if (density > 1) hazard('saw', .52, farY, .90, .70, .74);
         if (density > 2) hazard('drop_shuriken', .86, safeY(state.gapY + side * 32), .72, .66, .76);
+        if (density > 3) hazard('spinner', 1.10, sideY, .82, .70, .82);
       } else if (formation === 3) {
         hazard('sniper', .20, farY, .74, .62, .72);
         if (density > 1) hazard('mines', .50, sideY, .88, .76, .70);
         if (density > 2) hazard('sweep', .78, safeY(state.gapY - side * 44), .78, .64, .72);
+        if (density > 3) hazard('diamond', 1.08, farY, .90, .84, .86);
       } else {
         hazard('sword', .16, sideY, .72, .66, .74);
         if (density > 1) hazard('spinner', .44, farY, .82, .70, .80);
         if (density > 2) hazard('slash_gate', .76, sideY, .86, .72, .78);
+        if (density > 3) hazard(d.pipe.spikeBias > .3 ? 'dual' : 'saw', 1.04, farY, .88, .88, .78);
       }
+    }
+
+    function pickObstacleType(r, realm, pipe) {
+      if (pipe.spikeBias && Math.random() < pipe.spikeBias) return pick(Math.random(), ['top','bottom','dual','diamond','shuriken','drop_shuriken']);
+      return pick(r, pipe.pool || realm.pool);
     }
 
     function pick(r, list) {
@@ -525,13 +561,14 @@
       const realm = d.realm;
       const bosses = state.bossRush ? state.obstacles.filter(o => o.rush) : [];
       const boss = bosses[0] || null;
+      const pipe = currentPipe();
       modeEl.textContent = state.survivalMode
         ? `1V1 SURVIVAL\n${state.rivalAlive ? 'AI STILL ALIVE' : 'AI CRASHED'}`
         : state.duoMode
         ? `2V2 BOSS\n${bosses.length} TARGETS`
-        : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag}\n${realm.name}`;
+        : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag} / ${pipe.tag}\n${realm.name}`;
       modeEl.style.whiteSpace = 'pre-line';
-      modeEl.style.color = realm.accent;
+      modeEl.style.color = state.levelPipe === 'classic' ? realm.accent : `hsl(${pipe.hue},100%,68%)`;
       if (realm.name !== state.realmName) {
         state.realmName = realm.name;
         flash(180);
@@ -2074,6 +2111,20 @@
       btn.addEventListener('click', () => startSpecificBoss(index));
       bossChoicesEl.appendChild(btn);
     });
+    for (const [key, pipe] of Object.entries(levelPipes)) {
+      const btn = document.createElement('button');
+      btn.textContent = pipe.name;
+      btn.className = key === state.levelPipe ? 'active' : '';
+      btn.style.borderColor = key === state.levelPipe ? `hsl(${pipe.hue},100%,68%)` : '';
+      btn.addEventListener('click', () => {
+        state.levelPipe = key;
+        localStorage.wave_dash_pipe = key;
+        [...pipesEl.children].forEach(b => { b.classList.remove('active'); b.style.borderColor = ''; });
+        btn.classList.add('active');
+        btn.style.borderColor = `hsl(${pipe.hue},100%,68%)`;
+      });
+      pipesEl.appendChild(btn);
+    }
     for (const [key, theme] of Object.entries(trailThemes)) {
       const btn = document.createElement('button');
       btn.textContent = theme.name;
