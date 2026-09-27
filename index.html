@@ -315,11 +315,17 @@
       if (show) menu.style.display = 'none';
     }
 
+    function bossMaxHp(spec, level, duo = false) {
+      const base = spec.type === 'pacific' ? 85 : 18;
+      const scale = spec.type === 'pacific' ? 5 : 3;
+      return base + level * scale + (duo ? 10 : 0);
+    }
+
     function spawnBossRushBoss() {
       const realm = currentRealm();
       const level = state.bossIndex;
       const spec = bossRushTypes[level % bossRushTypes.length];
-      const hp = spec.type === 'pacific' ? 50 : 3 + Math.floor(level / 2);
+      const hp = bossMaxHp(spec, level);
       state.obstacles = [{
         x: state.w + 150,
         w: 116 + Math.min(48, level * 6),
@@ -355,7 +361,7 @@
     function makeRushBoss(level, lane = 0, duo = false) {
       const realm = currentRealm();
       const spec = bossRushTypes[level % bossRushTypes.length];
-      const hp = spec.type === 'pacific' ? 50 : 3 + Math.floor(level / 2) + (duo ? 2 : 0);
+      const hp = bossMaxHp(spec, level, duo);
       const laneY = lane ? state.h * .66 : state.h * .34;
       return {
         x: state.w + 150 + lane * 34,
