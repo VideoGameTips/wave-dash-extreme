@@ -1463,17 +1463,29 @@
       const sx = o.x + o.w * .5;
       const sy = o.gapY;
       ctx.save();
-      ctx.fillStyle = o.laser?.life > 0 ? '#ffffff' : '#ff3366';
-      ctx.strokeStyle = 'rgba(255,255,255,.7)';
-      ctx.lineWidth = 2;
+      ctx.translate(sx, sy);
+      ctx.fillStyle = 'rgba(5,8,16,.92)';
+      ctx.strokeStyle = o.fired ? '#ff6688' : 'rgba(255,255,255,.72)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(sx, sy, 15, 0, Math.PI * 2);
+      ctx.roundRect(-24, -14, 48, 28, 8);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = o.laser?.life > 0 ? '#ffffff' : '#ff3366';
+      ctx.beginPath();
+      ctx.arc(-7, 0, 6, 0, Math.PI * 2);
+      ctx.arc(9, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff3366';
+      ctx.fillRect(-5, -30, 10, 16);
+      ctx.restore();
+      ctx.save();
       if (o.fired && !o.laser) {
         ctx.strokeStyle = 'rgba(255,80,120,.42)';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 5;
+        ctx.setLineDash([22, 16]);
         line(0, o.targetY, state.w, o.targetY);
+        ctx.setLineDash([]);
       }
       if (o.laser && o.laser.life > 0) {
         ctx.globalCompositeOperation = 'lighter';
@@ -1543,46 +1555,61 @@
     }
     function drawSpinner(o) {
       const cx = o.x+o.w*.5, cy = o.gapY, time = performance.now()*.0045;
-      const blade = o.size * .62;
+      const blade = o.size * .72;
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(time + o.phase);
-      ctx.fillStyle = `hsl(${o.hue + 42}, 95%, 58%)`;
-      ctx.strokeStyle = 'rgba(255,255,255,.62)';
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 4; i++) {
-        ctx.rotate(Math.PI / 2);
-        ctx.beginPath();
-        ctx.moveTo(13, -8);
-        ctx.lineTo(blade, 0);
-        ctx.lineTo(13, 8);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#05060a';
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,255,255,.22)';
+      ctx.lineWidth = 24;
+      line(-blade, 0, blade, 0);
+      ctx.strokeStyle = `hsl(${o.hue + 125}, 100%, 58%)`;
+      ctx.lineWidth = 10;
+      ctx.shadowColor = `hsl(${o.hue + 125}, 100%, 62%)`;
+      ctx.shadowBlur = 26;
+      line(-blade, 0, blade, 0);
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#080b12';
+      ctx.strokeStyle = 'rgba(255,255,255,.72)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = `hsl(${o.hue + 125}, 100%, 60%)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 27, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
     function drawSweep(o) {
       const s = laserSegment(o);
+      const cx = o.x + o.w * .5;
+      const cy = o.gapY;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,.28)';
-      ctx.lineWidth = 18;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,255,255,.20)';
+      ctx.lineWidth = 24;
       line(s.ax, s.ay, s.bx, s.by);
       ctx.strokeStyle = `hsl(${o.hue + 120}, 100%, 62%)`;
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 9;
       ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 24;
       line(s.ax, s.ay, s.bx, s.by);
       ctx.shadowBlur = 0;
-      ctx.fillStyle = '#e9fbff';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#070a12';
+      ctx.strokeStyle = 'rgba(255,255,255,.66)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(s.ax, s.ay, 7, 0, Math.PI * 2);
-      ctx.arc(s.bx, s.by, 7, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1590,18 +1617,24 @@
       const s = swordState(o);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = s.active ? 'rgba(255,255,255,.58)' : 'rgba(255,255,255,.20)';
-      ctx.lineWidth = s.active ? 18 : 8;
+      ctx.strokeStyle = s.active ? 'rgba(255,255,255,.64)' : 'rgba(255,255,255,.18)';
+      ctx.lineWidth = s.active ? 24 : 9;
       line(s.x1, s.y1, s.x2, s.y2);
-      ctx.strokeStyle = s.active ? '#ff46e9' : 'rgba(255,70,233,.45)';
-      ctx.lineWidth = s.active ? 6 : 3;
-      ctx.shadowColor = '#ff46e9';
+      ctx.strokeStyle = s.active ? '#ff365f' : 'rgba(255,54,95,.50)';
+      ctx.lineWidth = s.active ? 8 : 4;
+      ctx.shadowColor = '#ff365f';
       ctx.shadowBlur = s.active ? 24 : 8;
       line(s.x1, s.y1, s.x2, s.y2);
       ctx.shadowBlur = 0;
-      ctx.fillStyle = s.active ? '#ffffff' : '#ff9cf3';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#080b12';
+      ctx.strokeStyle = 'rgba(255,255,255,.64)';
+      ctx.lineWidth = 3;
+      ctx.fillRect(s.cx - 19, s.baseY - (s.fromTop ? 12 : -12), 38, s.fromTop ? 16 : -16);
+      ctx.strokeRect(s.cx - 19, s.baseY - (s.fromTop ? 12 : -12), 38, s.fromTop ? 16 : -16);
+      ctx.fillStyle = s.active ? '#ffffff' : '#ff99aa';
       ctx.beginPath();
-      ctx.arc(s.cx, s.baseY, 10, 0, Math.PI * 2);
+      ctx.arc(s.cx, s.baseY, 8, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1678,16 +1711,22 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (const s of parts) {
-        ctx.strokeStyle = s.active ? 'rgba(255,255,255,.58)' : 'rgba(255,255,255,.18)';
-        ctx.lineWidth = s.active ? 18 : 7;
+        ctx.strokeStyle = s.active ? 'rgba(255,255,255,.58)' : 'rgba(255,255,255,.16)';
+        ctx.lineWidth = s.active ? 26 : 10;
         line(s.ax, s.ay, s.bx, s.by);
-        ctx.strokeStyle = s.active ? '#ff46e9' : 'rgba(255,70,233,.42)';
-        ctx.lineWidth = s.active ? 6 : 3;
-        ctx.shadowColor = '#ff46e9';
+        ctx.strokeStyle = s.active ? '#66f7ff' : 'rgba(102,247,255,.40)';
+        ctx.lineWidth = s.active ? 9 : 4;
+        ctx.shadowColor = '#66f7ff';
         ctx.shadowBlur = s.active ? 24 : 8;
         line(s.ax, s.ay, s.bx, s.by);
       }
       ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255,255,255,.30)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 10]);
+      line(o.x, o.gapY - o.gapH * .56, o.x + o.w, o.gapY + o.gapH * .56);
+      ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(255,255,255,.82)';
       ctx.beginPath();
       ctx.arc(o.x + o.w * .5, o.gapY, 7, 0, Math.PI * 2);
@@ -1698,18 +1737,26 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (const m of mineCenters(o)) {
-        ctx.fillStyle = `hsl(${o.hue + 180}, 100%, 58%)`;
-        ctx.strokeStyle = 'rgba(255,255,255,.62)';
+        ctx.fillStyle = 'rgba(6,9,15,.82)';
+        ctx.strokeStyle = `hsl(${o.hue + 180}, 100%, 68%)`;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, m.r + Math.sin(performance.now()*.006 + m.x) * 2, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, m.r + Math.sin(performance.now()*.006 + m.x) * 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,255,255,.22)';
-        ctx.lineWidth = 1;
+        ctx.fillStyle = `hsl(${o.hue + 180},100%,62%)`;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.r * .35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `hsla(${o.hue + 180},100%,70%,.28)`;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.r + 11, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,.20)';
+        ctx.lineWidth = 3;
+        line(m.x - m.r * .7, m.y, m.x + m.r * .7, m.y);
+        line(m.x, m.y - m.r * .7, m.x, m.y + m.r * .7);
       }
       ctx.restore();
     }
@@ -1717,32 +1764,45 @@
       const open = clawOpen(o);
       const topY = o.gapY - open;
       const botY = o.gapY + open;
-      ctx.fillStyle = `hsl(${o.hue + 290}, 95%, 60%)`;
-      ctx.strokeStyle = 'rgba(255,255,255,.62)';
+      const jawH = 24;
+      ctx.save();
+      ctx.fillStyle = 'rgba(8,10,18,.92)';
+      ctx.strokeStyle = `hsl(${o.hue + 290}, 95%, 68%)`;
+      ctx.lineWidth = 3;
+      ctx.fillRect(o.x - 8, topY - jawH, o.w + 16, jawH);
+      ctx.strokeRect(o.x - 8, topY - jawH, o.w + 16, jawH);
+      ctx.fillRect(o.x - 8, botY, o.w + 16, jawH);
+      ctx.strokeRect(o.x - 8, botY, o.w + 16, jawH);
+      ctx.fillStyle = `hsl(${o.hue + 290}, 95%, 58%)`;
+      for (let i = 0; i < 6; i++) {
+        const x = o.x + o.w * (i + .5) / 6;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, topY);
+        ctx.lineTo(x + 10, topY);
+        ctx.lineTo(x, topY + 30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x - 10, botY);
+        ctx.lineTo(x + 10, botY);
+        ctx.lineTo(x, botY - 30);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.22)';
       ctx.lineWidth = 2;
-      const claw = (y, dir) => {
-        for (let i = 0; i < 4; i++) {
-          const x = o.x + o.w * (.18 + i * .2);
-          ctx.beginPath();
-          ctx.moveTo(x - 11, y);
-          ctx.lineTo(x + 11, y);
-          ctx.lineTo(x, y + dir * (34 + i % 2 * 10));
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        }
-      };
-      claw(topY, 1);
-      claw(botY, -1);
-      ctx.strokeStyle = 'rgba(255,255,255,.18)';
       line(o.x, o.gapY, o.x + o.w, o.gapY);
+      ctx.restore();
     }
     function drawSaw(o) {
       for (const c of sawCenters(o)) {
         ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,.18)';
+        ctx.lineWidth = 5;
+        line(o.x - 18, c.y, o.x + o.w + 18, c.y);
         ctx.translate(c.x,c.y);
         ctx.rotate(performance.now()*.006*2.2+c.x*.01);
-        ctx.fillStyle = `hsl(${o.hue + 35}, 100%, 57%)`;
+        ctx.fillStyle = 'rgba(210,220,230,.92)';
         ctx.strokeStyle = 'rgba(255,255,255,.68)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1750,6 +1810,10 @@
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = `hsl(${o.hue + 35}, 100%, 48%)`;
+        ctx.beginPath();
+        ctx.arc(0, 0, o.size * .065, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
     }
@@ -1861,15 +1925,15 @@
 
     function tri(px,py,r,x,base,w,tip,down) { if(px+r<x || px-r>x+w)return false; const cx=x+w*.5, half=w*.5; const t=Math.max(0,1-Math.abs(px-cx)/half); const edge=base+(tip-base)*t; return down ? py-r<edge : py+r>edge; }
     function diamond(px,py,r,cx,cy,rx,ry) { return Math.abs(px-cx)/Math.max(1,rx+r)+Math.abs(py-cy)/Math.max(1,ry+r)<1; }
-    function spinnerHit(o,px,py,r){const cx=o.x+o.w*.5,cy=o.gapY,a=performance.now()*.0045+o.phase;for(let i=0;i<4;i++){const q=a+i*Math.PI/2;if(segDist(px,py,cx,cy,cx+Math.cos(q)*o.size*.5,cy+Math.sin(q)*o.size*.5)<r+5)return true;}return false;}
-    function laserSegment(o){const time=performance.now()*.0032,cx=o.x+o.w*.5,cy=o.gapY+Math.sin(time+o.phase)*o.gapH*.34,len=Math.min(210,o.gapH*1.28),angle=Math.sin(time*.85+o.phase)*.92,dx=Math.cos(angle)*len*.5,dy=Math.sin(angle)*len*.5;return{ax:cx-dx,ay:cy-dy,bx:cx+dx,by:cy+dy};}
+    function spinnerHit(o,px,py,r){const cx=o.x+o.w*.5,cy=o.gapY,a=performance.now()*.0045+o.phase,len=o.size*.72;return segDist(px,py,cx-Math.cos(a)*len,cy-Math.sin(a)*len,cx+Math.cos(a)*len,cy+Math.sin(a)*len)<r+9;}
+    function laserSegment(o){const time=performance.now()*.0032,cx=o.x+o.w*.5,cy=o.gapY+Math.sin(time+o.phase)*o.gapH*.34,len=Math.min(250,o.gapH*1.42),angle=Math.sin(time*.85+o.phase)*.92,dx=Math.cos(angle)*len*.5,dy=Math.sin(angle)*len*.5;return{ax:cx-dx,ay:cy-dy,bx:cx+dx,by:cy+dy};}
     function swordState(o){const time=performance.now()*.0045,cx=o.x+o.w*(.42+.14*Math.sin(o.phase)),fromTop=Math.sin(o.phase)>0,windup=(Math.sin(time*1.6+o.phase)+1)*.5,slam=Math.pow(windup,3.2),len=o.gapH*(.35+slam*1.35),baseY=fromTop?o.gapY-o.gapH*.5-34:o.gapY+o.gapH*.5+34,tipY=fromTop?baseY+len:baseY-len;return{cx,baseY,tipY,fromTop,active:slam>.54,charge:windup,x1:cx,y1:baseY,x2:cx,y2:tipY};}
     function swordHit(o,px,py,r){const s=swordState(o);if(!s.active||Math.abs(px-s.cx)>r+13)return false;return s.fromTop?py+r>s.baseY&&py-r<s.tipY:py-r<s.baseY&&py+r>s.tipY;}
     function zoneState(o){const time=performance.now()*.004,phase=(Math.sin(time*1.4+o.phase)+1)*.5,hot=phase>.68,y=o.gapY+Math.sin(o.phase*1.7)*o.gapH*.24,h=24+o.size*.08,x=o.x-12,w=o.w+24;return{x,y,w,h,hot,phase};}
     function zoneHit(o,px,py,r){const z=zoneState(o);return z.hot&&px+r>z.x&&px-r<z.x+z.w&&py+r>z.y-z.h*.5&&py-r<z.y+z.h*.5;}
     function shurikenCenter(o){const time=performance.now()*.0038+o.phase,cx=o.x+o.w*.5+Math.cos(time*1.2)*o.w*.28,cy=o.gapY+Math.sin(time*1.7)*o.gapH*.34;return{x:cx,y:cy,r:o.size*.18};}
     function dropShurikenCenter(o){const travel=Math.max(0,state.w-o.x+o.phase*24),x=o.x+o.w*.5+Math.sin(o.phase*3.1)*28,y=((travel*1.22)%(state.h+180))-90;return{x,y,r:o.size*.16};}
-    function slashGateSegments(o){const time=performance.now()*.0036+o.phase,hot=(Math.sin(time*1.4)+1)*.5>.42,len=Math.min(280,o.gapH*1.55),cx=o.x+o.w*.5,cy=o.gapY,spread=o.w*.34;return[-1,0,1].map((n,i)=>{const a=(i-1)*.72+Math.sin(time+n)*.42,dx=Math.cos(a)*len*.5,dy=Math.sin(a)*len*.5,ox=n*spread*.42;return{ax:cx+ox-dx,ay:cy-dy,bx:cx+ox+dx,by:cy+dy,active:hot};});}
+    function slashGateSegments(o){const time=performance.now()*.0036+o.phase,hot=(Math.sin(time*1.4)+1)*.5>.42,len=Math.min(320,o.gapH*1.72),cx=o.x+o.w*.5,cy=o.gapY,a=Math.sin(time)*.78,dx=Math.cos(a)*len*.5,dy=Math.sin(a)*len*.5;return[{ax:cx-dx,ay:cy-dy,bx:cx+dx,by:cy+dy,active:hot}];}
     function shurikenHit(o,px,py,r){const c=shurikenCenter(o);return Math.hypot(px-c.x,py-c.y)<r+c.r*.72;}
     function dropShurikenHit(o,px,py,r){const c=dropShurikenCenter(o);return Math.hypot(px-c.x,py-c.y)<r+c.r*.72;}
     function slashGateHit(o,px,py,r){return slashGateSegments(o).some(s=>s.active&&segHit(s,px,py,r+8));}
