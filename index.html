@@ -182,18 +182,39 @@
       spike_hell: { name: 'Spike Hell', tag: 'SPIKE HELL', gapAdd: 10, spacingMult: .88, densityAdd: 1, driftMult: 1.08, spikeBias: .68, hue: 8, pool: ['top','bottom','dual','diamond','shuriken','drop_shuriken','spinner','sword'] },
       needle_pipe: { name: 'Needle Pipe', tag: 'NEEDLE PIPE', gapAdd: 38, spacingMult: .92, densityAdd: 1, driftMult: 1.42, spikeBias: .44, hue: 52, pool: ['dual','top','bottom','slash_gate','spinner','sweep','shuriken','drop_shuriken'] },
       laser_maze: { name: 'Laser Maze', tag: 'LASER MAZE', gapAdd: 22, spacingMult: .84, densityAdd: 1, driftMult: 1.18, spikeBias: .12, hue: 190, pool: ['spinner','sweep','slash_gate','sword','sniper','claw','saw','shuriken'] },
-      demon_storm: { name: 'Demon Storm', tag: 'DEMON STORM', gapAdd: 32, spacingMult: .76, densityAdd: 2, driftMult: 1.48, spikeBias: .34, hue: 326, pool: ['dual','diamond','spinner','sweep','sword','slash_gate','claw','saw','mines','shuriken','drop_shuriken','blackout','sniper'] },
+      demon_storm: { name: 'Demon Storm', tag: 'DEMON STORM', gapAdd: 32, spacingMult: .76, densityAdd: 2, driftMult: 1.48, spikeBias: .34, hue: 326, pool: ['dual','diamond','spinner','sweep','sword','slash_gate','claw','saw','mines','shuriken','drop_shuriken','sniper'] },
     };
 
     const realms = [
-      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, lightsOut: 0, flashOff: false, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','sword','mines','shuriken','drop_shuriken','blackout','sniper'] },
+      { at: 0, name: 'Neon Drift', tag: 'NORMAL', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, lightsOut: 0, flashOff: false, redLights: 0, fire: 0, speed: 1, gap: 0, pool: ['top','bottom','dual','diamond','spinner','sweep','sword','mines','shuriken','drop_shuriken','sniper'] },
       { at: 450, name: 'Chrome Thunder', tag: 'HARD', hue: 210, accent: '#9cc7ff', bg: ['#070b16', '#121b2e', '#060812'], dark: .05, lightsOut: 0, flashOff: false, redLights: .08, fire: 0, speed: 1.03, gap: 6, pool: ['dual','diamond','spinner','sweep','sword','mines','sniper','top','bottom','claw','saw','shuriken','drop_shuriken','slash_gate'] },
-      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, lightsOut: .10, flashOff: false, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','slash_gate','sniper','dual','diamond','spinner','sweep','mines','claw','saw','shuriken','drop_shuriken','blackout'] },
-      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .46, lightsOut: .55, flashOff: true, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['blackout','sniper','sweep','spinner','slash_gate','sword','claw','saw','mines','diamond','boss','shuriken','drop_shuriken'] },
-      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, lightsOut: .22, flashOff: false, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','slash_gate','sniper','boss','dual','diamond','saw','claw','mines','blackout','sweep','shuriken','drop_shuriken'] },
-      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, lightsOut: .35, flashOff: true, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['slash_gate','sweep','sword','sniper','boss','saw','claw','mines','blackout','spinner','shuriken','drop_shuriken'] },
-      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, lightsOut: .42, flashOff: true, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','blackout','mines','sweep','spinner','shuriken','drop_shuriken'] },
-      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .66, lightsOut: .75, flashOff: true, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','blackout','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
+      { at: 900, name: 'Crimson Voltage', tag: 'INSANE', hue: 342, accent: '#ff3f7c', bg: ['#13050a', '#220912', '#070306'], dark: .10, lightsOut: .10, flashOff: false, redLights: .30, fire: .25, speed: 1.06, gap: 12, pool: ['sword','slash_gate','sniper','dual','diamond','spinner','sweep','mines','claw','saw','shuriken','drop_shuriken'] },
+      { at: 1400, name: 'Void Cathedral', tag: 'DEMON', hue: 275, accent: '#c970ff', bg: ['#06040f', '#130926', '#030208'], dark: .46, lightsOut: .55, flashOff: true, redLights: .10, fire: 0, speed: 1.09, gap: 18, pool: ['sniper','sweep','spinner','slash_gate','sword','claw','saw','mines','diamond','boss','shuriken','drop_shuriken'] },
+      { at: 2000, name: 'Infernal Demon Storm', tag: 'INFERNAL DEMON', hue: 14, accent: '#ff3a1f', bg: ['#120302', '#260704', '#050101'], dark: .34, lightsOut: .22, flashOff: false, redLights: .58, fire: 1, speed: 1.12, gap: 24, pool: ['sword','slash_gate','sniper','boss','dual','diamond','saw','claw','mines','sweep','shuriken','drop_shuriken'] },
+      { at: 2850, name: 'Abyssal Laser Riot', tag: 'NIGHTMARE', hue: 326, accent: '#ff4ecf', bg: ['#05020b', '#150421', '#030106'], dark: .40, lightsOut: .35, flashOff: true, redLights: .36, fire: .35, speed: 1.15, gap: 30, pool: ['slash_gate','sweep','sword','sniper','boss','saw','claw','mines','spinner','shuriken','drop_shuriken'] },
+      { at: 3800, name: 'Obsidian Godstorm', tag: 'EXTREME DEMON', hue: 0, accent: '#ff003c', bg: ['#020102', '#120005', '#000000'], dark: .50, lightsOut: .42, flashOff: true, redLights: .78, fire: .85, speed: 1.18, gap: 34, pool: ['boss','sword','slash_gate','sniper','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
+      { at: 5200, name: 'Glitched Eclipse', tag: 'MYTHIC DEMON', hue: 300, accent: '#ffffff', bg: ['#010105', '#0a0012', '#000000'], dark: .66, lightsOut: .75, flashOff: true, redLights: .46, fire: .55, speed: 1.20, gap: 38, pool: ['boss','sniper','slash_gate','sword','saw','claw','mines','sweep','spinner','shuriken','drop_shuriken'] },
+    ];
+    const obstacleThemes = {
+      cyan: { name: 'Neon Drift', hue: 185, accent: '#66f7ff', bg: ['#080a14', '#111a30', '#090b12'], dark: 0, lightsOut: 0, flashOff: false, redLights: 0, fire: 0 },
+      red: { name: 'Crimson Voltage', hue: 0, accent: '#ff3f55', bg: ['#160506', '#321015', '#100508'], dark: .12, lightsOut: .08, flashOff: false, redLights: .45, fire: .35 },
+      violet: { name: 'Void Cathedral', hue: 276, accent: '#c970ff', bg: ['#090716', '#211138', '#0c0714'], dark: .28, lightsOut: .25, flashOff: false, redLights: .08, fire: 0 },
+      amber: { name: 'Thunder Range', hue: 38, accent: '#ffbc52', bg: ['#130b05', '#2e1b08', '#100804'], dark: .08, lightsOut: .05, flashOff: false, redLights: .18, fire: .22 },
+      green: { name: 'Acid Machinery', hue: 112, accent: '#7cff55', bg: ['#06120a', '#102a17', '#071009'], dark: .15, lightsOut: .12, flashOff: false, redLights: 0, fire: 0 },
+      whiteout: { name: 'Chrome Pinch', hue: 214, accent: '#dcecff', bg: ['#11131a', '#262b36', '#0d0f15'], dark: .04, lightsOut: 0, flashOff: false, redLights: 0, fire: 0 },
+      blackout: { name: 'Blackout Corridor', hue: 260, accent: '#8a7cff', bg: ['#020204', '#070711', '#010104'], dark: .64, lightsOut: .92, flashOff: true, redLights: .10, fire: 0 },
+    };
+    const obstacleRuns = [
+      { name: 'Spike Lanes', types: ['top','bottom'], theme: 'cyan', min: 6, max: 10, weight: 1.2 },
+      { name: 'Pinch Gates', types: ['dual','diamond'], theme: 'whiteout', min: 5, max: 8, weight: 1.0 },
+      { name: 'Rotor Hall', types: ['spinner','sweep'], theme: 'violet', min: 5, max: 8, weight: .92 },
+      { name: 'Turret Gallery', types: ['shooter','burst'], theme: 'amber', min: 4, max: 7, weight: .78 },
+      { name: 'Redline Blades', types: ['sword','slash_gate'], theme: 'red', min: 4, max: 7, weight: .72 },
+      { name: 'Shuriken Storm', types: ['shuriken','drop_shuriken'], theme: 'amber', min: 4, max: 7, weight: .58 },
+      { name: 'Mine Drift', types: ['mines','diamond'], theme: 'green', min: 4, max: 6, weight: .42 },
+      { name: 'Crushers', types: ['claw','saw'], theme: 'green', min: 4, max: 6, weight: .36, demon: .18 },
+      { name: 'Marksmen', types: ['sniper','dual'], theme: 'amber', min: 3, max: 5, weight: .34, demon: .28 },
+      { name: 'Blackout Corridor', types: ['blackout','mines'], theme: 'blackout', min: 3, max: 5, weight: .16, demon: .48 },
     ];
     const bossRushTypes = [
       { name: 'Prism Tyrant', type: 'prism', hue: 205 },
@@ -227,6 +248,7 @@
       deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
       duoMode: false, allyY: 240, allyVy: 0, allyShotReadyAt: 0,
       survivalMode: false, rivalY: 240, rivalVy: 0, rivalAlive: true, rivalPx: 160, survivalResult: '',
+      obstacleRunLeft: 0, obstacleRunTypes: null, obstacleRunName: '', obstacleRunTheme: 'cyan',
     };
 
     function resize() {
@@ -278,6 +300,7 @@
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
         survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
+        obstacleRunLeft: 0, obstacleRunTypes: null, obstacleRunName: '', obstacleRunTheme: 'cyan',
       });
       for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
@@ -479,11 +502,10 @@
       const sign = state.gapY < state.h * .5 ? 1 : -1;
       const drift = (slam ? sign * (0.62 + Math.random() * .34) * maxRise : (Math.random() * 2 - 1) * maxRise * .86) * d.pipe.driftMult;
       state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
-      const roll = Math.random();
       const bossDue = state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
       const realm = d.realm;
-      const type = bossDue ? 'boss' : pickObstacleType(roll, realm, d.pipe);
+      const type = bossDue ? 'boss' : chooseObstacleType(d);
       const pack = [makeObstacle(type, state.nextX, state.gapY, d.gap, d.width, d.size, realm)];
       if (!bossDue) addTrapFormation(pack, d, realm);
       state.obstacles.push(...pack);
@@ -491,14 +513,59 @@
     }
 
     function makeObstacle(type, x, gapY, gapH, w, size, realm, phaseShift = 0) {
+      const theme = bossLike(type) ? realm : currentObstacleTheme();
       return {
         x, w, gapY, gapH, size, type,
-        spin: Math.random() * Math.PI, phase: Math.random() * Math.PI * 2, hue: realm.hue + Math.sin(state.dist * .003) * 32,
-        realmFire: realm.fire,
+        spin: Math.random() * Math.PI, phase: Math.random() * Math.PI * 2, hue: theme.hue + (Math.random() - .5) * 18,
+        realmFire: theme.fire ?? realm.fire,
+        theme: state.obstacleRunTheme || 'cyan',
         fired: false, armedAt: 0, targetY: 0, shot: null, shots: [], laser: null, bossTimer: 0,
         bossPattern: Math.floor(Math.random() * 3), bossBeam: null,
         phaseShift,
       };
+    }
+
+    function bossLike(type) {
+      return type === 'boss';
+    }
+
+    function currentObstacleTheme() {
+      return obstacleThemes[state.obstacleRunTheme] || obstacleThemes.cyan;
+    }
+
+    function pickObstacleRun(d) {
+      const score = state.dist / 10;
+      const demon = d.demon || 0;
+      const candidates = obstacleRuns
+        .filter(r => !r.demon || demon >= r.demon || state.extreme)
+        .map(r => {
+          let weight = r.weight;
+          if (d.pipe.spikeBias > .35 && (r.types.includes('top') || r.types.includes('dual'))) weight *= 1.55;
+          if (score < 700 && (r.types.includes('sniper') || r.types.includes('blackout') || r.types.includes('claw'))) weight *= .20;
+          if (state.extreme && (r.theme === 'red' || r.theme === 'blackout')) weight *= 1.55;
+          return { ...r, weight };
+        });
+      let total = candidates.reduce((sum, r) => sum + Math.max(0, r.weight), 0);
+      let roll = Math.random() * Math.max(.001, total);
+      let chosen = candidates[0];
+      for (const r of candidates) {
+        roll -= Math.max(0, r.weight);
+        if (roll <= 0) { chosen = r; break; }
+      }
+      const len = chosen.min + Math.floor(Math.random() * (chosen.max - chosen.min + 1));
+      state.obstacleRunLeft = Math.max(2, Math.round(len * (state.extreme ? .82 : 1)));
+      state.obstacleRunTypes = chosen.types.slice(0, 2);
+      state.obstacleRunName = chosen.name;
+      state.obstacleRunTheme = chosen.theme || 'cyan';
+    }
+
+    function chooseObstacleType(d) {
+      if (!state.obstacleRunLeft || !state.obstacleRunTypes) pickObstacleRun(d);
+      state.obstacleRunLeft--;
+      const types = state.obstacleRunTypes || ['top','bottom'];
+      if (types.length === 1) return types[0];
+      const alt = state.spawnIndex % 2;
+      return Math.random() < .72 ? types[alt] : types[1 - alt];
     }
 
     function addTrapFormation(pack, d, realm) {
@@ -511,38 +578,17 @@
       const safeY = y => clamp(y, laneGap * .5 + 26, state.h - laneGap * .5 - 26);
       const sideY = safeY(state.gapY + side * (sideSpace + 54));
       const farY = safeY(state.gapY - side * (sideSpace + 88));
-      const formation = state.spawnIndex % 5;
+      const runTypes = (state.obstacleRunTypes && state.obstacleRunTypes.length ? state.obstacleRunTypes : ['top','bottom'])
+        .filter(t => t !== 'boss');
       const hazard = (type, xMul, y, wMul = .72, hMul = .62, sizeMul = .72) => {
         pack.push(makeObstacle(type, cx + d.spacing * xMul, y, laneGap * hMul, Math.max(54, d.width * wMul), d.size * sizeMul, realm));
       };
-
-      if (formation === 0) {
-        if (d.pipe.spikeBias > .4) hazard('dual', .12, farY, .90, .95, .76);
-        hazard('spinner', .30, sideY, .80, .72, .82);
-        if (density > 1) hazard('sweep', .62, farY, .82, .70, .78);
-        if (density > 2) hazard('mines', .92, sideY, .90, .78, .70);
-        if (density > 3) hazard('diamond', 1.12, farY, .90, .80, .86);
-      } else if (formation === 1) {
-        hazard('slash_gate', .24, sideY, .86, .75, .78);
-        if (d.pipe.spikeBias > .3) hazard(Math.random() < .5 ? 'top' : 'bottom', .38, farY, .86, .98, .78);
-        if (density > 1) hazard('sword', .58, farY, .70, .66, .74);
-        if (density > 2) hazard('shuriken', .84, safeY((sideY + farY) * .5), .74, .70, .78);
-        if (density > 3) hazard('dual', 1.08, sideY, .86, .96, .80);
-      } else if (formation === 2) {
-        hazard('claw', .18, sideY, .92, .74, .76);
-        if (density > 1) hazard('saw', .52, farY, .90, .70, .74);
-        if (density > 2) hazard('drop_shuriken', .86, safeY(state.gapY + side * 32), .72, .66, .76);
-        if (density > 3) hazard('spinner', 1.10, sideY, .82, .70, .82);
-      } else if (formation === 3) {
-        hazard('sniper', .20, farY, .74, .62, .72);
-        if (density > 1) hazard('mines', .50, sideY, .88, .76, .70);
-        if (density > 2) hazard('sweep', .78, safeY(state.gapY - side * 44), .78, .64, .72);
-        if (density > 3) hazard('diamond', 1.08, farY, .90, .84, .86);
-      } else {
-        hazard('sword', .16, sideY, .72, .66, .74);
-        if (density > 1) hazard('spinner', .44, farY, .82, .70, .80);
-        if (density > 2) hazard('slash_gate', .76, sideY, .86, .72, .78);
-        if (density > 3) hazard(d.pipe.spikeBias > .3 ? 'dual' : 'saw', 1.04, farY, .88, .88, .78);
+      const ys = [sideY, farY, safeY((sideY + farY) * .5), safeY(state.gapY + side * 32)];
+      const xs = [.26, .56, .84, 1.10];
+      for (let i = 0; i < density; i++) {
+        const t = runTypes[(i + state.spawnIndex) % runTypes.length];
+        const heavy = t === 'dual' || t === 'blackout' || t === 'claw' || t === 'saw';
+        hazard(t, xs[i], ys[i], heavy ? .90 : .74, heavy ? .82 : .66, heavy ? .82 : .74);
       }
     }
 
@@ -554,6 +600,21 @@
     function pick(r, list) {
       const i = Math.min(list.length - 1, Math.floor(r * list.length));
       return list[i];
+    }
+
+    function currentVisualTheme(realm) {
+      if (state.bossRush || state.duoMode) return realm;
+      let best = null;
+      let bestDist = Infinity;
+      for (const o of state.obstacles) {
+        if (o.type === 'boss') continue;
+        const center = o.x + o.w * .5;
+        if (center < state.px - 120) continue;
+        const dist = Math.abs(center - state.px);
+        if (dist < bestDist) { best = o; bestDist = dist; }
+      }
+      const themed = obstacleThemes[best?.theme || state.obstacleRunTheme];
+      return themed ? { ...realm, ...themed, speed: realm.speed, gap: realm.gap, tag: realm.tag } : realm;
     }
 
     function frame(now) {
@@ -972,11 +1033,12 @@
     function draw() {
       const w = state.w, h = state.h;
       const realm = currentRealm();
+      const visual = currentVisualTheme(realm);
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, realm.bg[0]); g.addColorStop(.52, realm.bg[1]); g.addColorStop(1, realm.bg[2]);
+      g.addColorStop(0, visual.bg[0]); g.addColorStop(.52, visual.bg[1]); g.addColorStop(1, visual.bg[2]);
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-      drawRealmLights(realm);
-      ctx.strokeStyle = `hsla(${realm.hue},100%,70%,.12)`; ctx.lineWidth = 1;
+      drawRealmLights(visual);
+      ctx.strokeStyle = `hsla(${visual.hue},100%,70%,.12)`; ctx.lineWidth = 1;
       const grid = 42, off = -(state.dist * .22) % grid;
       for (let x = off; x < w; x += grid) line(x, 0, x, h);
       for (let y = 0; y < h; y += grid) line(0, y, w, y);
@@ -990,8 +1052,8 @@
       drawDeflectFx();
       drawRealmBanner(realm);
       if (performance.now() < state.flashUntil) {
-        ctx.globalCompositeOperation = realm.flashOff ? 'source-over' : 'difference';
-        ctx.fillStyle = realm.flashOff ? 'rgba(0,0,0,.88)' : 'rgba(255,255,255,.92)';
+        ctx.globalCompositeOperation = visual.flashOff ? 'source-over' : 'difference';
+        ctx.fillStyle = visual.flashOff ? 'rgba(0,0,0,.88)' : 'rgba(255,255,255,.92)';
         ctx.fillRect(0, 0, w, h);
         ctx.globalCompositeOperation = 'source-over';
       }
