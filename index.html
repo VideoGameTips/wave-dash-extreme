@@ -177,6 +177,7 @@
       royal: { name: 'Royal', hues: [264, 286, 312] },
       void: { name: 'Void', hues: [326, 352, 18] },
     };
+    const WAVE_VERTICAL_SPEED = 510;
     const levelPipes = {
       classic: { name: 'Classic', tag: 'CLASSIC', gapAdd: 0, spacingMult: 1, densityAdd: 0, driftMult: 1, spikeBias: 0, hue: 185 },
       spike_hell: { name: 'Spike Hell', tag: 'SPIKE HELL', gapAdd: 10, spacingMult: .88, densityAdd: 1, driftMult: 1.08, spikeBias: .68, hue: 8, pool: ['top','bottom','dual','diamond','shuriken','drop_shuriken','spinner','sword'] },
@@ -495,7 +496,7 @@
     function spawnObstacle() {
       const d = difficulty();
       const travel = d.spacing / Math.max(1, d.speed);
-      const maxRise = travel * 410 * .95;
+      const maxRise = travel * WAVE_VERTICAL_SPEED * .95;
       const margin = d.gap * .55 + 32;
       state.spawnIndex++;
       const slam = state.spawnIndex % 3 === 0;
@@ -628,7 +629,7 @@
 
     function update(dt) {
       const d = difficulty();
-      state.vy = state.holding ? -410 : 410;
+      state.vy = state.holding ? -WAVE_VERTICAL_SPEED : WAVE_VERTICAL_SPEED;
       state.y += state.vy * dt;
       state.dist += d.speed * dt * (state.bossRush ? .32 : 1);
       state.nextX -= d.speed * dt;
@@ -772,7 +773,7 @@
       const target = bosses[0];
       const desired = target ? clamp(target.gapY + Math.sin(performance.now() * .003) * 42, 36, state.h - 36) : state.h * .42;
       const dy = desired - state.allyY;
-      state.allyVy = clamp(dy * 7, -410, 410);
+      state.allyVy = clamp(dy * 7, -WAVE_VERTICAL_SPEED, WAVE_VERTICAL_SPEED);
       state.allyY = clamp(state.allyY + state.allyVy * dt, 24, state.h - 24);
       const now = performance.now();
       if (target && now >= state.allyShotReadyAt) {
@@ -800,7 +801,7 @@
       const target = next ? clamp(next.gapY + wobble, 32, state.h - 32) : state.h * .5;
       const margin = 10 + d.demon * 4;
       const wantsUp = state.rivalY > target + margin;
-      state.rivalVy = wantsUp ? -410 : 410;
+      state.rivalVy = wantsUp ? -WAVE_VERTICAL_SPEED : WAVE_VERTICAL_SPEED;
       state.rivalY += state.rivalVy * dt;
       const panic = next && next.x < px + 85 && Math.abs(state.rivalY - next.gapY) > next.gapH * .38;
       if (panic) state.rivalY += (next.gapY - state.rivalY) * Math.min(1, dt * 3.2);
