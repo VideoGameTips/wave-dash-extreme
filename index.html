@@ -271,7 +271,7 @@
         demon,
         realm,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
-        gap: Math.max(72, 205 - Math.min(86, state.dist * 0.0065) - demon * 22 - realm.gap - pipe.gapAdd),
+        gap: Math.max(102, 205 - Math.min(72, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd),
         spacing: Math.max(92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
         width: 88 + demon * 16,
         size: 116 + demon * 20,
@@ -496,12 +496,12 @@
     function spawnObstacle() {
       const d = difficulty();
       const travel = d.spacing / Math.max(1, d.speed);
-      const maxRise = travel * WAVE_VERTICAL_SPEED * .95;
+      const maxRise = travel * WAVE_VERTICAL_SPEED * .74;
       const margin = d.gap * .55 + 32;
       state.spawnIndex++;
       const slam = state.spawnIndex % 3 === 0;
       const sign = state.gapY < state.h * .5 ? 1 : -1;
-      const drift = (slam ? sign * (0.62 + Math.random() * .34) * maxRise : (Math.random() * 2 - 1) * maxRise * .86) * d.pipe.driftMult;
+      const drift = (slam ? sign * (0.48 + Math.random() * .24) * maxRise : (Math.random() * 2 - 1) * maxRise * .62) * Math.min(1.18, d.pipe.driftMult);
       state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
       const bossDue = state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
@@ -581,6 +581,9 @@
       const farY = safeY(state.gapY - side * (sideSpace + 88));
       const runTypes = (state.obstacleRunTypes && state.obstacleRunTypes.length ? state.obstacleRunTypes : ['top','bottom'])
         .filter(t => t !== 'boss');
+      const spikeGate = ['top','bottom','dual','diamond'].includes(pack[0]?.type)
+        || runTypes.every(t => ['top','bottom','dual','diamond'].includes(t));
+      if (spikeGate) return;
       const hazard = (type, xMul, y, wMul = .72, hMul = .62, sizeMul = .72) => {
         pack.push(makeObstacle(type, cx + d.spacing * xMul, y, laneGap * hMul, Math.max(54, d.width * wMul), d.size * sizeMul, realm));
       };
