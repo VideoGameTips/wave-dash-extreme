@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Wave Dash Extreme</title>
+  <title>Geometry Dash Trainer</title>
   <style>
     :root {
       color-scheme: dark;
@@ -129,8 +129,10 @@
   </div>
   <div class="menu" id="menu">
     <div class="panel">
-      <h1>Wave Dash Extreme</h1>
-      <p>Hold mouse, touch, or Space to climb. Release to dive. X shoots. C deflects. Survive the spikes, lasers, traps, blackouts, and giant right-side bosses.</p>
+      <h1>Geometry Dash Trainer</h1>
+      <p>Practice Geometry Dash-style movement. Pick a mode, pick a level pipe, then survive tighter spikes, traps, blackouts, and giant right-side bosses.</p>
+      <div class="pipe-label">Practice Mode</div>
+      <div class="trails" id="practiceModes"></div>
       <div class="pipe-label">Level Pipe</div>
       <div class="trails" id="pipes"></div>
       <div class="pipe-label">Trail</div>
@@ -166,6 +168,7 @@
     const survivalStartBtn = document.getElementById('survivalStart');
     const duoStartBtn = document.getElementById('duoStart');
     const bossCloseBtn = document.getElementById('bossClose');
+    const practiceModesEl = document.getElementById('practiceModes');
     const pipesEl = document.getElementById('pipes');
     const trailsEl = document.getElementById('trails');
     const bossChoicesEl = document.getElementById('bossChoices');
@@ -178,9 +181,16 @@
       void: { name: 'Void', hues: [326, 352, 18] },
     };
     const WAVE_VERTICAL_SPEED = 510;
+    const practiceModes = {
+      wave: { name: 'Wave', tag: 'WAVE', hue: 185, hint: 'hold to climb' },
+      cube: { name: 'Cube', tag: 'CUBE', hue: 44, hint: 'tap to jump' },
+      ship: { name: 'Ship', tag: 'SHIP', hue: 205, hint: 'hold to thrust' },
+      ufo: { name: 'UFO', tag: 'UFO', hue: 292, hint: 'tap to hop' },
+      ball: { name: 'Ball', tag: 'BALL', hue: 110, hint: 'tap to flip gravity' },
+    };
     const levelPipes = {
       classic: { name: 'Classic', tag: 'CLASSIC', gapAdd: 0, spacingMult: 1, densityAdd: 0, driftMult: 1, spikeBias: 0, hue: 185 },
-      spike_only: { name: 'Spike Only', tag: 'SPIKE ONLY', gapAdd: 6, spacingMult: 1.05, densityAdd: 0, driftMult: .82, spikeBias: 1, hue: 352, onlySpikes: true, noBoss: true, minGap: 78, pool: ['top','bottom','dual','diamond'] },
+      spike_only: { name: 'Spike Only', tag: 'SPIKE ONLY', gapAdd: 6, spacingMult: 1.05, densityAdd: 0, driftMult: .82, spikeBias: 1, hue: 352, onlySpikes: true, noBoss: true, minGap: 78, griefAt: 2100, pool: ['top','bottom','dual','diamond'] },
       spike_hell: { name: 'Spike Hell', tag: 'SPIKE HELL', gapAdd: 10, spacingMult: .88, densityAdd: 1, driftMult: 1.08, spikeBias: .68, hue: 8, pool: ['top','bottom','dual','diamond','shuriken','drop_shuriken','spinner','sword'] },
       needle_pipe: { name: 'Needle Pipe', tag: 'NEEDLE PIPE', gapAdd: 38, spacingMult: .92, densityAdd: 1, driftMult: 1.42, spikeBias: .44, hue: 52, pool: ['dual','top','bottom','slash_gate','spinner','sweep','shuriken','drop_shuriken'] },
       laser_maze: { name: 'Laser Maze', tag: 'LASER MAZE', gapAdd: 22, spacingMult: .84, densityAdd: 1, driftMult: 1.18, spikeBias: .12, hue: 190, pool: ['spinner','sweep','slash_gate','sword','sniper','claw','saw','shuriken'] },
@@ -246,8 +256,10 @@
       trail: [], obstacles: [], flashUntil: 0, darknessUntil: 0, bossNextAt: 4200,
       extreme: false, slashTimes: [], trailTheme: localStorage.wave_dash_trail || 'comet',
       levelPipe: localStorage.wave_dash_pipe || 'classic',
+      practiceMode: localStorage.wave_dash_practice_mode || 'wave',
       last: 0, crashed: false, realmName: '', bossRush: false, bossIndex: 0, bossClears: 0,
       deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+      gravityDir: 1,
       duoMode: false, allyY: 240, allyVy: 0, allyShotReadyAt: 0,
       survivalMode: false, rivalY: 240, rivalVy: 0, rivalAlive: true, rivalPx: 160, survivalResult: '',
       obstacleRunLeft: 0, obstacleRunTypes: null, obstacleRunName: '', obstacleRunTheme: 'cyan',
@@ -268,11 +280,13 @@
       const demon = state.extreme ? 1 : Math.max(0, Math.min(1, (score - 1800) / 2400));
       const realm = currentRealm();
       const pipe = currentPipe();
-      const spikeTight = pipe.onlySpikes ? Math.min(58, score * 0.015) : 0;
-      const minGap = pipe.minGap || 102;
+      const grief = griefLevel(pipe, score);
+      const spikeTight = pipe.onlySpikes ? Math.min(82, score * 0.015 + grief * 34) : 0;
+      const minGap = pipe.onlySpikes ? Math.max(54, (pipe.minGap || 102) - grief * 28) : (pipe.minGap || 102);
       return {
         demon,
         realm,
+        grief,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
         gap: Math.max(minGap, 205 - Math.min(72, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd - spikeTight),
         spacing: Math.max(pipe.onlySpikes ? 128 : 92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
@@ -284,6 +298,19 @@
 
     function currentPipe() {
       return levelPipes[state.levelPipe] || levelPipes.classic;
+    }
+
+    function currentPracticeMode() {
+      return practiceModes[state.practiceMode] || practiceModes.wave;
+    }
+
+    function griefLevel(pipe, score = state.dist / 10) {
+      if (!pipe.onlySpikes) return 0;
+      return Math.max(0, Math.min(1, (score - (pipe.griefAt || 2100)) / 1800));
+    }
+
+    function groundY() {
+      return state.h - 46;
     }
 
     function currentRealm() {
@@ -302,6 +329,7 @@
         gapY: state.h * 0.52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: 0,
         darknessUntil: 0, bossNextAt: 4200, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        gravityDir: 1,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
         survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
         obstacleRunLeft: 0, obstacleRunTypes: null, obstacleRunName: '', obstacleRunTheme: 'cyan',
@@ -327,6 +355,7 @@
         dist: 1400, nextX: state.w + 220, gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [],
         flashUntil: performance.now() + 260, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        gravityDir: 1,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
         survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
       });
@@ -363,6 +392,7 @@
         dist: 2000, nextX: state.w + 220, gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [],
         flashUntil: performance.now() + 320, darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), realmName: '',
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        gravityDir: 1,
         duoMode: true, allyY: state.h * .42, allyVy: 0, allyShotReadyAt: 0,
         survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
       });
@@ -380,6 +410,7 @@
         gapY: state.h * .52, spawnIndex: 0, trail: [], obstacles: [], flashUntil: performance.now() + 220,
         darknessUntil: 0, bossNextAt: Infinity, last: performance.now(), bossRush: false, bossIndex: 0, bossClears: 0,
         deflectUntil: 0, deflectReadyAt: 0, playerShots: [], playerShotReadyAt: 0,
+        gravityDir: 1,
         duoMode: false, allyY: state.h * .48, allyVy: 0, allyShotReadyAt: 0,
         survivalMode: true, rivalY: state.h * .46, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 54, survivalResult: '',
       });
@@ -502,10 +533,17 @@
       const maxRise = travel * WAVE_VERTICAL_SPEED * .74;
       const margin = d.gap * .55 + 32;
       state.spawnIndex++;
-      const slam = state.spawnIndex % 3 === 0;
-      const sign = state.gapY < state.h * .5 ? 1 : -1;
-      const drift = (slam ? sign * (0.48 + Math.random() * .24) * maxRise : (Math.random() * 2 - 1) * maxRise * .62) * Math.min(1.18, d.pipe.driftMult);
-      state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
+      if (d.pipe.onlySpikes && (state.practiceMode === 'cube' || state.practiceMode === 'ball')) {
+        const hop = 70 + Math.sin(state.spawnIndex * .72) * 38 + d.grief * 28;
+        const baseY = state.practiceMode === 'ball' && state.gravityDir < 0 ? 46 + hop : groundY() - hop;
+        state.gapY = clamp(baseY, margin, state.h - margin);
+      } else {
+        const slam = state.spawnIndex % 3 === 0 || (d.pipe.onlySpikes && d.grief > .62);
+        const sign = state.gapY < state.h * .5 ? 1 : -1;
+        const griefDir = d.pipe.onlySpikes && d.grief > .01 ? Math.sin(state.spawnIndex * 1.27) * maxRise * (.38 + d.grief * .36) : 0;
+        const drift = ((slam ? sign * (0.48 + Math.random() * .24) * maxRise : (Math.random() * 2 - 1) * maxRise * .62) + griefDir) * Math.min(1.18, d.pipe.driftMult);
+        state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
+      }
       const bossDue = !d.pipe.noBoss && state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
       const realm = d.realm;
@@ -541,7 +579,8 @@
       if (d.pipe.onlySpikes) {
         const score = state.dist / 10;
         const tight = Math.min(1, score / 2600);
-        const types = tight > .68 ? ['dual','diamond'] : tight > .34 ? ['top','dual'] : ['top','bottom'];
+        const grief = d.grief || 0;
+        const types = grief > .45 ? ['dual'] : tight > .68 ? ['dual','diamond'] : tight > .34 ? ['top','dual'] : ['top','bottom'];
         state.obstacleRunLeft = 9999;
         state.obstacleRunTypes = types;
         state.obstacleRunName = 'Spike Only';
@@ -577,7 +616,12 @@
       if (d.pipe.onlySpikes) {
         const score = state.dist / 10;
         const tight = Math.min(1, score / 3200);
+        const grief = d.grief || 0;
         const roll = Math.random();
+        if (state.practiceMode === 'cube') return roll < .22 + grief * .20 ? 'dual' : 'bottom';
+        if (state.practiceMode === 'ball') return roll < .30 + grief * .24 ? 'dual' : (state.gravityDir < 0 ? 'top' : 'bottom');
+        if (grief > .78) return 'dual';
+        if (grief > .45) return roll < .82 ? 'dual' : 'diamond';
         if (tight > .72) return roll < .58 ? 'dual' : 'diamond';
         if (tight > .40) return roll < .40 ? 'dual' : roll < .62 ? 'diamond' : (state.spawnIndex % 2 ? 'top' : 'bottom');
         return state.spawnIndex % 4 === 0 ? 'dual' : (state.spawnIndex % 2 ? 'top' : 'bottom');
@@ -653,8 +697,7 @@
 
     function update(dt) {
       const d = difficulty();
-      state.vy = state.holding ? -WAVE_VERTICAL_SPEED : WAVE_VERTICAL_SPEED;
-      state.y += state.vy * dt;
+      updatePlayerMotion(dt);
       state.dist += d.speed * dt * (state.bossRush ? .32 : 1);
       state.nextX -= d.speed * dt;
       addTrail(dt);
@@ -670,7 +713,7 @@
       while (state.obstacles.length && done(state.obstacles[0])) state.obstacles.shift();
       ensureBossRushBoss();
       if (!state.bossRush) while (state.nextX < state.w + 260) spawnObstacle();
-      if (state.y < 18 || state.y > state.h - 18) crash('player');
+      if (state.practiceMode !== 'cube' && (state.y < 18 || state.y > state.h - 18)) crash('player');
       for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash('player');
       if (state.crashed) return;
       scoreEl.textContent = Math.floor(state.dist / 10);
@@ -678,16 +721,62 @@
       const bosses = state.bossRush ? state.obstacles.filter(o => o.rush) : [];
       const boss = bosses[0] || null;
       const pipe = currentPipe();
+      const practice = currentPracticeMode();
       modeEl.textContent = state.survivalMode
         ? `1V1 SURVIVAL\n${state.rivalAlive ? 'AI STILL ALIVE' : 'AI CRASHED'}`
         : state.duoMode
         ? `2V2 BOSS\n${bosses.length} TARGETS`
-        : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${realm.tag} / ${pipe.tag}\n${realm.name}`;
+        : boss ? `BOSS RUSH ${state.bossIndex + 1}\n${boss.rushName}` : `${practice.tag} / ${pipe.tag}\n${realm.name}`;
       modeEl.style.whiteSpace = 'pre-line';
-      modeEl.style.color = state.levelPipe === 'classic' ? realm.accent : `hsl(${pipe.hue},100%,68%)`;
+      modeEl.style.color = state.levelPipe === 'classic' ? `hsl(${practice.hue},100%,68%)` : `hsl(${pipe.hue},100%,68%)`;
       if (realm.name !== state.realmName) {
         state.realmName = realm.name;
         flash(180);
+      }
+    }
+
+    function jumpPressed() {
+      const mode = state.practiceMode;
+      if (mode === 'cube') {
+        if (Math.abs(state.y - groundY()) < 1.5 || state.y > groundY() - 2) state.vy = -620;
+      } else if (mode === 'ufo') {
+        state.vy = -470;
+      } else if (mode === 'ball') {
+        const atFloor = state.gravityDir > 0 && state.y >= groundY() - 1.5;
+        const atCeil = state.gravityDir < 0 && state.y <= 46 + 1.5;
+        if (atFloor || atCeil) {
+          state.gravityDir *= -1;
+          state.vy = 0;
+        }
+      }
+    }
+
+    function updatePlayerMotion(dt) {
+      const mode = state.practiceMode;
+      if (mode === 'cube') {
+        state.vy += 1850 * dt;
+        state.y += state.vy * dt;
+        const gy = groundY();
+        if (state.y > gy) { state.y = gy; state.vy = 0; }
+        if (state.y < 18) { state.y = 18; state.vy = 0; }
+      } else if (mode === 'ship') {
+        state.vy += (state.holding ? -1180 : 1060) * dt;
+        state.vy = clamp(state.vy, -470, 470);
+        state.y += state.vy * dt;
+      } else if (mode === 'ufo') {
+        state.vy += 1260 * dt;
+        state.vy = clamp(state.vy, -520, 560);
+        state.y += state.vy * dt;
+      } else if (mode === 'ball') {
+        state.vy += 2050 * state.gravityDir * dt;
+        state.y += state.vy * dt;
+        const ceil = 46;
+        const floor = groundY();
+        if (state.y > floor) { state.y = floor; state.vy = 0; }
+        if (state.y < ceil) { state.y = ceil; state.vy = 0; }
+      } else {
+        state.vy = state.holding ? -WAVE_VERTICAL_SPEED : WAVE_VERTICAL_SPEED;
+        state.y += state.vy * dt;
       }
     }
 
@@ -1073,7 +1162,7 @@
       drawPlayerShots();
       drawAlly();
       drawRival();
-      drawShip(false);
+      drawPlayer(false);
       drawDeflectFx();
       drawRealmBanner(realm);
       if (performance.now() < state.flashUntil) {
@@ -1082,7 +1171,7 @@
         ctx.fillRect(0, 0, w, h);
         ctx.globalCompositeOperation = 'source-over';
       }
-      drawShip(true);
+      drawPlayer(true);
     }
 
     function activateDeflect() {
@@ -1384,6 +1473,90 @@
         ctx.beginPath();
         ctx.moveTo(21, 0);
         ctx.lineTo(3, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPlayer(topPass = false) {
+      if (state.practiceMode === 'cube') return drawCube(topPass);
+      if (state.practiceMode === 'ufo') return drawUfo(topPass);
+      if (state.practiceMode === 'ball') return drawBall(topPass);
+      return drawShip(topPass);
+    }
+
+    function drawCube(topPass = false) {
+      const theme = trailThemes[state.trailTheme] || trailThemes.comet;
+      ctx.save();
+      ctx.translate(state.px, state.y);
+      ctx.rotate((state.dist * .018) % (Math.PI * 2));
+      const s = topPass ? 1.28 : 1;
+      ctx.scale(s, s);
+      ctx.shadowColor = `hsl(${theme.hues[0]},100%,62%)`;
+      ctx.shadowBlur = topPass ? 30 : 18;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = topPass ? 6 : 4;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = topPass ? '#fff' : `hsl(${theme.hues[1] || 44},100%,62%)`;
+      ctx.fillRect(-13, -13, 26, 26);
+      ctx.strokeRect(-13, -13, 26, 26);
+      ctx.fillStyle = '#050713';
+      ctx.fillRect(-6, -5, 4, 4);
+      ctx.fillRect(4, -5, 4, 4);
+      ctx.fillRect(-5, 5, 12, 3);
+      ctx.restore();
+    }
+
+    function drawUfo(topPass = false) {
+      const theme = trailThemes[state.trailTheme] || trailThemes.comet;
+      ctx.save();
+      ctx.translate(state.px, state.y);
+      ctx.rotate(Math.sin(performance.now() * .006) * .12);
+      const s = topPass ? 1.32 : 1;
+      ctx.scale(s, s);
+      ctx.shadowColor = `hsl(${theme.hues[2] || theme.hues[0]},100%,62%)`;
+      ctx.shadowBlur = topPass ? 32 : 22;
+      ctx.lineWidth = topPass ? 6 : 4;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = topPass ? '#fff' : `hsl(${theme.hues[0]},100%,62%)`;
+      ctx.beginPath();
+      ctx.ellipse(0, 3, 22, 9, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = `hsl(${theme.hues[1] || theme.hues[0]},100%,70%)`;
+      ctx.beginPath();
+      ctx.arc(0, -4, 12, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      for (let i = -1; i <= 1; i++) {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(i * 10, 5, 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawBall(topPass = false) {
+      const theme = trailThemes[state.trailTheme] || trailThemes.comet;
+      ctx.save();
+      ctx.translate(state.px, state.y);
+      ctx.rotate((state.dist * .026 * state.gravityDir) % (Math.PI * 2));
+      const s = topPass ? 1.32 : 1;
+      ctx.scale(s, s);
+      ctx.shadowColor = `hsl(${theme.hues[0]},100%,62%)`;
+      ctx.shadowBlur = topPass ? 32 : 20;
+      ctx.lineWidth = topPass ? 6 : 4;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = topPass ? '#fff' : `hsl(${theme.hues[2] || theme.hues[0]},100%,58%)`;
+      ctx.beginPath();
+      ctx.arc(0, 0, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = `hsl(${theme.hues[1] || theme.hues[0]},100%,70%)`;
+      ctx.lineWidth = topPass ? 4 : 3;
+      for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(12, 0);
         ctx.stroke();
       }
       ctx.restore();
@@ -2179,7 +2352,11 @@
       setTimeout(() => { menu.style.display = 'grid'; }, 520);
     }
 
-    function setHolding(v) { state.holding = v; }
+    function setHolding(v) {
+      const pressed = !!v && !state.holding;
+      state.holding = !!v;
+      if (pressed) jumpPressed();
+    }
     addEventListener('resize', resize);
     addEventListener('pointerdown', () => setHolding(true));
     addEventListener('pointerup', () => setHolding(false));
@@ -2229,6 +2406,21 @@
       btn.addEventListener('click', () => startSpecificBoss(index));
       bossChoicesEl.appendChild(btn);
     });
+    for (const [key, mode] of Object.entries(practiceModes)) {
+      const btn = document.createElement('button');
+      btn.textContent = mode.name;
+      btn.title = mode.hint;
+      btn.className = key === state.practiceMode ? 'active' : '';
+      btn.style.borderColor = key === state.practiceMode ? `hsl(${mode.hue},100%,68%)` : '';
+      btn.addEventListener('click', () => {
+        state.practiceMode = key;
+        localStorage.wave_dash_practice_mode = key;
+        [...practiceModesEl.children].forEach(b => { b.classList.remove('active'); b.style.borderColor = ''; });
+        btn.classList.add('active');
+        btn.style.borderColor = `hsl(${mode.hue},100%,68%)`;
+      });
+      practiceModesEl.appendChild(btn);
+    }
     for (const [key, pipe] of Object.entries(levelPipes)) {
       const btn = document.createElement('button');
       btn.textContent = pipe.name;
