@@ -180,6 +180,7 @@
     const WAVE_VERTICAL_SPEED = 510;
     const levelPipes = {
       classic: { name: 'Classic', tag: 'CLASSIC', gapAdd: 0, spacingMult: 1, densityAdd: 0, driftMult: 1, spikeBias: 0, hue: 185 },
+      spike_only: { name: 'Spike Only', tag: 'SPIKE ONLY', gapAdd: 6, spacingMult: 1.05, densityAdd: 0, driftMult: .82, spikeBias: 1, hue: 352, onlySpikes: true, noBoss: true, minGap: 78, pool: ['top','bottom','dual','diamond'] },
       spike_hell: { name: 'Spike Hell', tag: 'SPIKE HELL', gapAdd: 10, spacingMult: .88, densityAdd: 1, driftMult: 1.08, spikeBias: .68, hue: 8, pool: ['top','bottom','dual','diamond','shuriken','drop_shuriken','spinner','sword'] },
       needle_pipe: { name: 'Needle Pipe', tag: 'NEEDLE PIPE', gapAdd: 38, spacingMult: .92, densityAdd: 1, driftMult: 1.42, spikeBias: .44, hue: 52, pool: ['dual','top','bottom','slash_gate','spinner','sweep','shuriken','drop_shuriken'] },
       laser_maze: { name: 'Laser Maze', tag: 'LASER MAZE', gapAdd: 22, spacingMult: .84, densityAdd: 1, driftMult: 1.18, spikeBias: .12, hue: 190, pool: ['spinner','sweep','slash_gate','sword','sniper','claw','saw','shuriken'] },
@@ -267,12 +268,14 @@
       const demon = state.extreme ? 1 : Math.max(0, Math.min(1, (score - 1800) / 2400));
       const realm = currentRealm();
       const pipe = currentPipe();
+      const spikeTight = pipe.onlySpikes ? Math.min(58, score * 0.015) : 0;
+      const minGap = pipe.minGap || 102;
       return {
         demon,
         realm,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
-        gap: Math.max(102, 205 - Math.min(72, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd),
-        spacing: Math.max(92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
+        gap: Math.max(minGap, 205 - Math.min(72, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd - spikeTight),
+        spacing: Math.max(pipe.onlySpikes ? 128 : 92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
         width: 88 + demon * 16,
         size: 116 + demon * 20,
         pipe,
@@ -503,7 +506,7 @@
       const sign = state.gapY < state.h * .5 ? 1 : -1;
       const drift = (slam ? sign * (0.48 + Math.random() * .24) * maxRise : (Math.random() * 2 - 1) * maxRise * .62) * Math.min(1.18, d.pipe.driftMult);
       state.gapY = clamp(state.gapY + drift, margin, state.h - margin);
-      const bossDue = state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
+      const bossDue = !d.pipe.noBoss && state.dist >= state.bossNextAt && state.spawnIndex % (state.extreme ? 3 : 5) === 0;
       if (bossDue) state.bossNextAt = state.dist + (state.extreme ? 2400 : 6200) + Math.random() * (state.extreme ? 1500 : 3400);
       const realm = d.realm;
       const type = bossDue ? 'boss' : chooseObstacleType(d);
@@ -535,6 +538,16 @@
     }
 
     function pickObstacleRun(d) {
+      if (d.pipe.onlySpikes) {
+        const score = state.dist / 10;
+        const tight = Math.min(1, score / 2600);
+        const types = tight > .68 ? ['dual','diamond'] : tight > .34 ? ['top','dual'] : ['top','bottom'];
+        state.obstacleRunLeft = 9999;
+        state.obstacleRunTypes = types;
+        state.obstacleRunName = 'Spike Only';
+        state.obstacleRunTheme = 'red';
+        return;
+      }
       const score = state.dist / 10;
       const demon = d.demon || 0;
       const candidates = obstacleRuns
@@ -561,6 +574,14 @@
     }
 
     function chooseObstacleType(d) {
+      if (d.pipe.onlySpikes) {
+        const score = state.dist / 10;
+        const tight = Math.min(1, score / 3200);
+        const roll = Math.random();
+        if (tight > .72) return roll < .58 ? 'dual' : 'diamond';
+        if (tight > .40) return roll < .40 ? 'dual' : roll < .62 ? 'diamond' : (state.spawnIndex % 2 ? 'top' : 'bottom');
+        return state.spawnIndex % 4 === 0 ? 'dual' : (state.spawnIndex % 2 ? 'top' : 'bottom');
+      }
       if (!state.obstacleRunLeft || !state.obstacleRunTypes) pickObstacleRun(d);
       state.obstacleRunLeft--;
       const types = state.obstacleRunTypes || ['top','bottom'];
