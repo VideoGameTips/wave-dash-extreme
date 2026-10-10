@@ -187,6 +187,7 @@
       ship: { name: 'Ship', tag: 'SHIP', hue: 205, hint: 'hold to thrust' },
       ufo: { name: 'UFO', tag: 'UFO', hue: 292, hint: 'tap to hop' },
       ball: { name: 'Ball', tag: 'BALL', hue: 110, hint: 'tap to flip gravity' },
+      spider: { name: 'Spider', tag: 'SPIDER', hue: 318, hint: 'tap to teleport between surfaces' },
     };
     const levelPipes = {
       classic: { name: 'Classic', tag: 'CLASSIC', gapAdd: 0, spacingMult: 1, densityAdd: 0, driftMult: 1, spikeBias: 0, hue: 185 },
@@ -282,13 +283,13 @@
       const pipe = currentPipe();
       const grief = griefLevel(pipe, score);
       const spikeTight = pipe.onlySpikes ? Math.min(82, score * 0.015 + grief * 34) : 0;
-      const minGap = pipe.onlySpikes ? Math.max(54, (pipe.minGap || 102) - grief * 28) : (pipe.minGap || 102);
+      const minGap = pipe.onlySpikes ? Math.max(54, (pipe.minGap || 102) - grief * 28) : (pipe.minGap || (state.practiceMode === 'wave' ? 84 : 102));
       return {
         demon,
         realm,
         grief,
         speed: (360 + Math.min(210, state.dist * 0.006)) * (state.extreme ? 1.22 : 1) * realm.speed,
-        gap: Math.max(minGap, 205 - Math.min(72, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd - spikeTight),
+        gap: Math.max(minGap, 183 - Math.min(78, state.dist * 0.0060) - demon * 16 - realm.gap - pipe.gapAdd - spikeTight),
         spacing: Math.max(pipe.onlySpikes ? 128 : 92, (280 - Math.min(88, state.dist * 0.0048) - demon * 26 - realm.gap * .55) * pipe.spacingMult),
         width: 88 + demon * 16,
         size: 116 + demon * 20,
@@ -334,6 +335,8 @@
         survivalMode: false, rivalY: state.h * .48, rivalVy: 0, rivalAlive: true, rivalPx: state.px + 48, survivalResult: '',
         obstacleRunLeft: 0, obstacleRunTypes: null, obstacleRunName: '', obstacleRunTheme: 'cyan',
       });
+      if (['cube', 'ball', 'spider'].includes(state.practiceMode)) state.y = groundY();
+      state.holding = false;
       for (let i = 0; i < 7; i++) spawnObstacle();
       menu.style.display = 'none';
       requestAnimationFrame(frame);
@@ -529,7 +532,8 @@
 
     function spawnObstacle() {
       const d = difficulty();
-      const travel = d.spacing / Math.max(1, d.speed);
+      if (state.practiceMode !== 'wave') return spawnPracticeObstacle(d);
+      const travel = Math.max(32, d.spacing - d.width) / Math.max(1, d.speed);
       const maxRise = travel * WAVE_VERTICAL_SPEED * .74;
       const margin = d.gap * .55 + 32;
       state.spawnIndex++;
@@ -538,7 +542,7 @@
         const baseY = state.practiceMode === 'ball' && state.gravityDir < 0 ? 46 + hop : groundY() - hop;
         state.gapY = clamp(baseY, margin, state.h - margin);
       } else {
-        const slam = state.spawnIndex % 3 === 0 || (d.pipe.onlySpikes && d.grief > .62);
+        const slam = state.spawnIndex % 2 === 0 || (d.pipe.onlySpikes && d.grief > .62);
         const sign = state.gapY < state.h * .5 ? 1 : -1;
         const griefDir = d.pipe.onlySpikes && d.grief > .01 ? Math.sin(state.spawnIndex * 1.27) * maxRise * (.38 + d.grief * .36) : 0;
         const drift = ((slam ? sign * (0.48 + Math.random() * .24) * maxRise : (Math.random() * 2 - 1) * maxRise * .62) + griefDir) * Math.min(1.18, d.pipe.driftMult);
@@ -552,6 +556,34 @@
       if (!bossDue) addTrapFormation(pack, d, realm);
       state.obstacles.push(...pack);
       state.nextX += d.spacing + Math.random() * 28;
+    }
+
+    function spawnPracticeObstacle(d) {
+      const mode = state.practiceMode;
+      state.spawnIndex++;
+      state.obstacleRunTheme = d.pipe.onlySpikes ? 'red' : ['cyan', 'red', 'violet'][Math.floor(state.spawnIndex / 8) % 3];
+      state.obstacleRunName = currentPracticeMode().name;
+      if (['cube', 'ball', 'spider'].includes(mode)) {
+        const count = mode === 'cube' ? 1 + Math.min(2, Math.floor(state.dist / 8000)) : 2;
+        const width = count * 38;
+        const ceiling = mode !== 'cube' && state.spawnIndex % 2 === 0;
+        const o = makeObstacle(ceiling ? 'ceiling_spikes' : 'floor_spikes', state.nextX, state.h / 2, 0, width, Math.min(68, 42 + state.dist / 1800), d.realm);
+        o.spikeCount = count;
+        state.obstacles.push(o);
+        // Cube needs a complete jump/landing cycle; ball needs time to cross the screen.
+        const crossing = mode === 'ball' ? Math.sqrt(2 * Math.max(0, groundY() - 46) / 2050) + .3 : mode === 'cube' ? .82 : .65;
+        state.nextX += Math.max(width + 115, d.speed * crossing + width);
+      } else {
+        const ship = mode === 'ship';
+        const gap = Math.min(state.h - 100, Math.max(ship ? 150 : 165, d.gap + (ship ? 50 : 65)));
+        const spacing = Math.max(d.spacing, d.speed * (ship ? .72 : .8));
+        const margin = gap / 2 + 35;
+        const rise = (spacing - d.width) / d.speed * (ship ? 300 : 260);
+        state.gapY = clamp(state.gapY + (state.spawnIndex % 2 ? -1 : 1) * rise * (.55 + Math.random() * .3), margin, state.h - margin);
+        const type = ship ? 'dual' : state.spawnIndex % 2 ? 'bottom' : 'top';
+        state.obstacles.push(makeObstacle(type, state.nextX, state.gapY, gap, d.width, d.size, d.realm));
+        state.nextX += spacing;
+      }
     }
 
     function makeObstacle(type, x, gapY, gapH, w, size, realm, phaseShift = 0) {
@@ -748,6 +780,13 @@
           state.gravityDir *= -1;
           state.vy = 0;
         }
+      } else if (mode === 'spider') {
+        state.spiderFrom = state.y;
+        state.gravityDir *= -1;
+        state.y = state.gravityDir < 0 ? 46 : groundY();
+        state.vy = 0;
+        state.spiderFlashUntil = performance.now() + 140;
+        for (const o of state.obstacles) if (hit(o, state.px, state.y, 7)) crash('player');
       }
     }
 
@@ -760,7 +799,9 @@
         if (state.y > gy) { state.y = gy; state.vy = 0; }
         if (state.y < 18) { state.y = 18; state.vy = 0; }
       } else if (mode === 'ship') {
-        state.vy += (state.holding ? -1180 : 1060) * dt;
+        // Stronger braking on reversal removes the long wait for thrust to take effect.
+        const reversing = state.holding ? state.vy > 0 : state.vy < 0;
+        state.vy += (state.holding ? -2000 : 1800) * (reversing ? 1.75 : 1) * dt;
         state.vy = clamp(state.vy, -470, 470);
         state.y += state.vy * dt;
       } else if (mode === 'ufo') {
@@ -774,6 +815,9 @@
         const floor = groundY();
         if (state.y > floor) { state.y = floor; state.vy = 0; }
         if (state.y < ceil) { state.y = ceil; state.vy = 0; }
+      } else if (mode === 'spider') {
+        state.y = state.gravityDir < 0 ? 46 : groundY();
+        state.vy = 0;
       } else {
         state.vy = state.holding ? -WAVE_VERTICAL_SPEED : WAVE_VERTICAL_SPEED;
         state.y += state.vy * dt;
@@ -1098,6 +1142,12 @@
     }
 
     function hit(o, px, py, r) {
+      if (o.type === 'floor_spikes' || o.type === 'ceiling_spikes') {
+        const ceiling = o.type === 'ceiling_spikes', base = ceiling ? 32 : groundY() + 14;
+        const count = o.spikeCount || 1, width = o.w / count;
+        for (let i = 0; i < count; i++) if (tri(px, py - base, r, o.x + i * width, 0, width, ceiling ? o.size : -o.size, ceiling)) return true;
+        return false;
+      }
       const top = o.gapY - o.gapH * .5, bot = o.gapY + o.gapH * .5;
       if ((o.type === 'top' || o.type === 'dual') && tri(px, py, r, o.x, 0, o.w, top, true)) return true;
       if ((o.type === 'bottom' || o.type === 'dual') && tri(px, py, r, o.x, state.h, o.w, bot, false)) return true;
@@ -1156,6 +1206,11 @@
       const grid = 42, off = -(state.dist * .22) % grid;
       for (let x = off; x < w; x += grid) line(x, 0, x, h);
       for (let y = 0; y < h; y += grid) line(0, y, w, y);
+      if (['cube', 'ball', 'spider'].includes(state.practiceMode)) {
+        ctx.fillStyle = '#151b2b'; ctx.fillRect(0, groundY() + 14, w, 32);
+        ctx.strokeStyle = '#ffffff'; line(0, groundY() + 14, w, groundY() + 14);
+        if (state.practiceMode !== 'cube') { ctx.fillRect(0, 0, w, 32); line(0, 32, w, 32); }
+      }
       for (const o of state.obstacles) drawObstacle(o);
       drawDarkness();
       drawTrail();
@@ -1409,6 +1464,10 @@
       ctx.fillStyle = `hsl(${o.hue}, 92%, 57%)`;
       ctx.strokeStyle = 'rgba(255,255,255,.52)';
       ctx.lineWidth = 2;
+      if (o.type === 'floor_spikes' || o.type === 'ceiling_spikes') {
+        const ceiling = o.type === 'ceiling_spikes', count = o.spikeCount || 1;
+        for (let i = 0; i < count; i++) drawGiantSpike(o.x + i * o.w / count, ceiling ? 32 : groundY() + 14, o.w / count, o.size, ceiling ? 'down' : 'up');
+      }
       if (o.type === 'top' || o.type === 'dual') drawGiantSpike(o.x, 0, o.w, top, 'down');
       if (o.type === 'bottom' || o.type === 'dual') {
         ctx.fillStyle = `hsl(${o.hue}, 92%, 57%)`;
@@ -1479,10 +1538,28 @@
     }
 
     function drawPlayer(topPass = false) {
+      if (state.practiceMode === 'spider') return drawSpider(topPass);
       if (state.practiceMode === 'cube') return drawCube(topPass);
       if (state.practiceMode === 'ufo') return drawUfo(topPass);
       if (state.practiceMode === 'ball') return drawBall(topPass);
       return drawShip(topPass);
+    }
+
+    function drawSpider(topPass = false) {
+      ctx.save(); ctx.translate(state.px, state.y);
+      ctx.scale(1, state.gravityDir);
+      ctx.strokeStyle = topPass ? '#ffffff' : '#ff5acd'; ctx.lineWidth = topPass ? 5 : 3;
+      ctx.shadowColor = '#ff5acd'; ctx.shadowBlur = 18;
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+        const x = side * (12 + i * 5);
+        ctx.beginPath(); ctx.moveTo(side * 7, -5 + i * 4); ctx.lineTo(x, -10 + i * 3); ctx.lineTo(x + side * 4, 13); ctx.stroke();
+      }
+      ctx.fillStyle = topPass ? '#ffffff' : '#9a2b91'; ctx.fillRect(-11, -10, 22, 19);
+      ctx.fillStyle = '#151020'; ctx.fillRect(-6, -6, 4, 4); ctx.fillRect(2, -6, 4, 4);
+      ctx.restore();
+      if (!topPass && performance.now() < (state.spiderFlashUntil || 0)) {
+        ctx.strokeStyle = '#ff80de'; ctx.lineWidth = 3; line(state.px, state.spiderFrom, state.px, state.y);
+      }
     }
 
     function drawCube(topPass = false) {
@@ -2414,6 +2491,7 @@
       btn.style.borderColor = key === state.practiceMode ? `hsl(${mode.hue},100%,68%)` : '';
       btn.addEventListener('click', () => {
         state.practiceMode = key;
+        state.obstacles = []; state.obstacleRunLeft = 0; state.obstacleRunTypes = null;
         localStorage.wave_dash_practice_mode = key;
         [...practiceModesEl.children].forEach(b => { b.classList.remove('active'); b.style.borderColor = ''; });
         btn.classList.add('active');
